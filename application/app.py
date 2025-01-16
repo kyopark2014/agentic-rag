@@ -6,19 +6,19 @@ mode_descriptions = {
         "대화이력을 바탕으로 챗봇과 일상의 대화를 편안히 즐길수 있습니다."
     ],
     "RAG": [
-        "Bedrock Knowledge Base를 이용해 구현한 RAG로 필요한 정보를 검색합니다."
+        "기본적인 RAG로 Hallucination을 최소화하고 애플리케이션에 필요한 정보를 제공합니다."
     ],
-    "Agent (Tool Use)": [
-        "Tool Use 방식의 Workflow를 수행하는 Agent를 구현합니다. 여기에서는 날씨, 시간, 도서추천, RAG, 인터넷 검색을 제공합니다."
+    "Agentic RAG": [
+        "Agent를 이용해 RAG의 성능을 향상시킵니다."
     ],
-    "Agent (Reflection)": [
-        "Reflection Workflow를 수행하는 Agent 구현합니다."
+    "Corrective RAG": [
+        "Corrective RAG를 활용하여 RAG의 성능을 향상 시킵니다."
     ],
-    "Agent (Planning)": [
-        "Planning Workflow를 수행하는 Agent 구현합니다."
+    "Self RAG": [
+        "Self RAG를 활용하여 RAG의 성능을 향상 시킵니다."
     ],
-    "Agent (Multi-agent Collaboration)": [
-        "Planning/Reflection agent들을 이용하여 Multi-agent Collaboration Workflow을 수행합니다. 여기서 Reflection agent들은 병렬처리하여 수행시간을 단축합니다."
+    "Self Corrective RAG": [
+        "Self Corrective RAG를 활용하여 RAG의 성능을 향상 시킵니다."
     ]
 }
 
@@ -30,14 +30,14 @@ with st.sidebar:
         "여기에서는 일상적인 대화와 각종 툴을 이용해 Agent를 구현할 수 있습니다." 
         "또한 번역이나 문법 확인과 같은 용도로 사용할 수 있습니다."
         "주요 코드는 LangChain과 LangGraph를 이용해 구현되었습니다.\n"
-        "상세한 코드는 [Github](https://github.com/kyopark2014/langgraph-nova)을 참조하세요."
+        "상세한 코드는 [Github](https://github.com/kyopark2014/agentic-rag)을 참조하세요."
     )
 
     st.subheader("🐱 대화 형태")
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agent (Tool Use)", "Agent (Reflection)", "Agent (Planning)", "Agent (Multi-agent Collaboration)"], index=0
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
@@ -122,7 +122,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
                 chat.save_chat_history(prompt, response)
 
-        elif mode == 'Agent (Tool Use)':
+        elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
                 response = chat.run_agent_executor(prompt, st, debugMode)
                 st.write(response)
@@ -139,9 +139,9 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
                 chat.save_chat_history(prompt, response)
         
-        elif mode == 'Agent (Reflection)':
+        elif mode == 'Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_knowledge_guru(prompt, st, debugMode)
+                response = chat.run_basic_rag(prompt, st, debugMode)
                 st.write(response)
                 print('response: ', response)
 
@@ -156,7 +156,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
                 chat.save_chat_history(prompt, response)
 
-        elif mode == 'Agent (Planning)':
+        elif mode == 'Self RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
                 response = chat.run_planning(prompt, st, debugMode)
                 st.write(response)
@@ -173,7 +173,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
                 chat.save_chat_history(prompt, response)
 
-        elif mode == 'Agent (Multi-agent Collaboration)':
+        elif mode == 'Self Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
                 response = chat.run_long_form_writing_agent(prompt, st, debugMode)
                 st.write(response)

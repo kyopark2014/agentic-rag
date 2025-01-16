@@ -6,184 +6,69 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as elbv2_tg from 'aws-cdk-lib/aws-elasticloadbalancingv2-targets'
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as opensearchserverless from 'aws-cdk-lib/aws-opensearchserverless';
 import * as cloudFront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
+import * as path from "path";
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
 const projectName = `langgraph-nova`; 
 const region = process.env.CDK_DEFAULT_REGION;    
 const accountId = process.env.CDK_DEFAULT_ACCOUNT;
 const targetPort = 8080;
 const bucketName = `storage-for-${projectName}-${accountId}-${region}`; 
-const vectorIndexName = projectName
 const ec2RoleName = `role-ec2-for-${projectName}-${region}`
+const stage = 'dev';
+const s3_prefix = 'docs';
+
+const opensearch_account = "admin";
+const opensearch_passwd = "Wifi1234!";
+let opensearch_url = "";
+
+const titan_embedding_v2 = [  // dimension = 1024
+  {
+    "bedrock_region": "us-west-2", // Oregon
+    "model_type": "titan",
+    "model_id": "amazon.titan-embed-text-v2:0"
+  },
+  {
+    "bedrock_region": "us-east-1", // N.Virginia
+    "model_type": "titan",
+    "model_id": "amazon.titan-embed-text-v2:0"
+  },
+  {
+    "bedrock_region": "us-east-2", // Ohio
+    "model_type": "titan",
+    "model_id": "amazon.titan-embed-text-v2:0"
+  }
+];
+
+const nova_pro = [
+  {
+    "bedrock_region": "us-west-2", // Oregon
+    "model_type": "nova",
+    "model_id": "us.amazon.nova-pro-v1:0"
+  }
+];
+
+const LLM_for_chat = nova_pro; 
+const LLM_for_multimodal = nova_pro;
+const LLM_embedding = titan_embedding_v2;  //  titan_embedding_v2_single
+
+const max_object_size = 102400000; // 100 MB max size of an object, 50MB(default)
+const enableHybridSearch = 'true';
+const enableParallelSummary = 'true';
+const supportedFormat = JSON.stringify(["pdf", "txt", "csv", "pptx", "ppt", "docx", "doc", "xlsx", "py", "js", "md", "jpeg", "jpg", "png"]);  
+const enableParentDocumentRetrival = 'true';
+const vectorIndexName = projectName
 
 export class CdkAgenticRagStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-
-    // Knowledge Base Role
-    const knowledge_base_role = new iam.Role(this,  `role-knowledge-base-for-${projectName}`, {
-      roleName: `role-knowledge-base-for-${projectName}-${region}`,
-      assumedBy: new iam.CompositePrincipal(
-        new iam.ServicePrincipal("bedrock.amazonaws.com")
-      )    
-    });
-    
-    const bedrockInvokePolicy = new iam.PolicyStatement({ 
-      effect: iam.Effect.ALLOW,
-      resources: [
-        `arn:aws:bedrock:${region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
-        `arn:aws:bedrock:${region}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0`,
-        `arn:aws:bedrock:${region}::foundation-model/amazon.titan-embed-text-v1`,
-        `arn:aws:bedrock:${region}::foundation-model/amazon.titan-embed-text-v2:0`,
-        `arn:aws:bedrock:${region}::foundation-model/amazon.nova-pro-v1:0`
-      ],
-      // resources: ['*'],
-      actions: [
-        "bedrock:InvokeModel", 
-        "bedrock:InvokeModelEndpoint", 
-        "bedrock:InvokeModelEndpointAsync",        
-      ],
-    });        
-    knowledge_base_role.attachInlinePolicy( 
-      new iam.Policy(this, `bedrock-invoke-policy-for-${projectName}`, {
-        statements: [bedrockInvokePolicy],
-      }),
-    );  
-    
-    const bedrockKnowledgeBaseS3Policy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: [
-        "s3:GetBucketLocation",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "s3:ListBucketMultipartUploads",
-        "s3:ListMultipartUploadParts",
-        "s3:AbortMultipartUpload",
-        "s3:CreateBucket",
-        "s3:PutObject",
-        "s3:PutBucketLogging",
-        "s3:PutBucketVersioning",
-        "s3:PutBucketNotification",
-      ],
-    });
-    knowledge_base_role.attachInlinePolicy( 
-      new iam.Policy(this, `knowledge-base-s3-policy-for-${projectName}`, {
-        statements: [bedrockKnowledgeBaseS3Policy],
-      }),
-    );  
-    
-    const knowledgeBaseOpenSearchPolicy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],   // `arn:aws:aoss:${region}:${accountId}:collection/${collectionName}`
-      actions: ["aoss:APIAccessAll"],
-    });
-    knowledge_base_role.attachInlinePolicy( 
-      new iam.Policy(this, `bedrock-agent-opensearch-policy-for-${projectName}`, {
-        statements: [knowledgeBaseOpenSearchPolicy],
-      }),
-    );  
-
-    const knowledgeBaseBedrockPolicy = new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: ["bedrock:*"],
-    });
-    knowledge_base_role.attachInlinePolicy( 
-      new iam.Policy(this, `bedrock-agent-bedrock-policy-for-${projectName}`, {
-        statements: [knowledgeBaseBedrockPolicy],
-      }),
-    );  
-
-    // OpenSearch Serverless
-    const collectionName = vectorIndexName
-    const OpenSearchCollection = new opensearchserverless.CfnCollection(this, `correction-for-${projectName}`, {
-      name: collectionName,    
-      description: `opensearch correction for ${projectName}`,
-      standbyReplicas: 'DISABLED',
-      type: 'VECTORSEARCH',
-    });
-    const collectionArn = OpenSearchCollection.attrArn
-
-    new cdk.CfnOutput(this, `OpensearchCollectionEndpoint-${projectName}`, {
-      value: OpenSearchCollection.attrCollectionEndpoint,
-      description: 'The endpoint of opensearch correction',
-    });
-
-    const encPolicyName = `encription-${projectName}`
-    const encPolicy = new opensearchserverless.CfnSecurityPolicy(this, `enc-policy-for-${projectName}`, {
-      name: encPolicyName,
-      type: "encryption",
-      description: `opensearch encryption policy for ${projectName}`,
-      policy:
-        `{"Rules":[{"ResourceType":"collection","Resource":["collection/${collectionName}"]}],"AWSOwnedKey":true}`,      
-    });
-    OpenSearchCollection.addDependency(encPolicy);
-
-    const netPolicyName = `network-${projectName}`
-    const netPolicy = new opensearchserverless.CfnSecurityPolicy(this, `net-policy-for-${projectName}`, {
-      name: netPolicyName,
-      type: 'network',    
-      description: `opensearch network policy for ${projectName}`,
-      policy: JSON.stringify([
-        {
-          Rules: [
-            {
-              ResourceType: "dashboard",
-              Resource: [`collection/${collectionName}`],
-            },
-            {
-              ResourceType: "collection",
-              Resource: [`collection/${collectionName}`],              
-            }
-          ],
-          AllowFromPublic: true,          
-        },
-      ]), 
-      
-    });
-    OpenSearchCollection.addDependency(netPolicy);
-
-    const account = new iam.AccountPrincipal(this.account)
-    const dataAccessPolicyName = `data-${projectName}`
-    const dataAccessPolicy = new opensearchserverless.CfnAccessPolicy(this, `data-collection-policy-for-${projectName}`, {
-      name: dataAccessPolicyName,
-      type: "data",
-      policy: JSON.stringify([
-        {
-          Rules: [
-            {
-              Resource: [`collection/${collectionName}`],
-              Permission: [
-                "aoss:CreateCollectionItems",
-                "aoss:DeleteCollectionItems",
-                "aoss:UpdateCollectionItems",
-                "aoss:DescribeCollectionItems",
-              ],
-              ResourceType: "collection",
-            },
-            {
-              Resource: [`index/${collectionName}/*`],
-              Permission: [
-                "aoss:CreateIndex",
-                "aoss:DeleteIndex",
-                "aoss:UpdateIndex",
-                "aoss:DescribeIndex",
-                "aoss:ReadDocument",
-                "aoss:WriteDocument",
-              ], 
-              ResourceType: "index",
-            }
-          ],
-          Principal: [
-            account.arn
-          ], 
-        },
-      ]),
-    });
-    OpenSearchCollection.addDependency(dataAccessPolicy);
 
     // s3 
     const s3Bucket = new s3.Bucket(this, `storage-${projectName}`,{
@@ -208,6 +93,247 @@ export class CdkAgenticRagStack extends cdk.Stack {
       value: s3Bucket.bucketName,
       description: 'The nmae of bucket',
     });
+
+    // cloudfront for sharing s3
+    const distribution_docs = new cloudFront.Distribution(this, `sharing-for-${projectName}`, {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(s3Bucket),
+        allowedMethods: cloudFront.AllowedMethods.ALLOW_ALL,
+        cachePolicy: cloudFront.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cloudFront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+      priceClass: cloudFront.PriceClass.PRICE_CLASS_200,  
+    });
+    new cdk.CfnOutput(this, `distribution-sharing-DomainName-for-${projectName}`, {
+      value: 'https://'+distribution_docs.domainName,
+      description: 'The domain name of the Distribution Sharing',
+    });
+
+    // role
+    const role = new iam.Role(this, `api-role-for-${projectName}`, {
+      roleName: `api-role-for-${projectName}-${region}`,
+      assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com")
+    });
+    role.addToPolicy(new iam.PolicyStatement({
+      resources: ['*'],
+      actions: [
+        'lambda:InvokeFunction',
+        'cloudwatch:*'
+      ]
+    }));
+    role.addManagedPolicy({
+      managedPolicyArn: 'arn:aws:iam::aws:policy/AWSLambdaExecute',
+    }); 
+
+    // API Gateway
+    const api = new apiGateway.RestApi(this, `api-chatbot-for-${projectName}`, {
+      description: 'API Gateway for chatbot',
+      endpointTypes: [apiGateway.EndpointType.REGIONAL],
+      restApiName: 'rest-api-for-'+projectName,      
+      binaryMediaTypes: ['application/pdf', 'text/plain', 'text/csv'], 
+      deployOptions: {
+        stageName: stage,
+
+        // logging for debug
+        // loggingLevel: apiGateway.MethodLoggingLevel.INFO, 
+        // dataTraceEnabled: true,
+      },
+    });  
+
+    // opensearch
+    // Permission for OpenSearch
+    const domainName = projectName
+    const accountId = process.env.CDK_DEFAULT_ACCOUNT;
+    const resourceArn = `arn:aws:es:${region}:${accountId}:domain/${domainName}/*`
+    
+    const OpenSearchAccessPolicy = new iam.PolicyStatement({        
+      resources: [resourceArn],      
+      actions: ['es:*'],
+      effect: iam.Effect.ALLOW,
+      principals: [new iam.AnyPrincipal()],      
+    });  
+
+    const domain = new opensearch.Domain(this, 'Domain', {
+      version: opensearch.EngineVersion.OPENSEARCH_2_3,
+      
+      domainName: domainName,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      enforceHttps: true,
+      fineGrainedAccessControl: {
+        masterUserName: opensearch_account,
+        // masterUserPassword: cdk.SecretValue.secretsManager('opensearch-private-key'),
+        masterUserPassword:cdk.SecretValue.unsafePlainText(opensearch_passwd)
+      },
+      capacity: {
+        masterNodes: 3,
+        masterNodeInstanceType: 'r6g.large.search',
+        // multiAzWithStandbyEnabled: false,
+        dataNodes: 3,
+        dataNodeInstanceType: 'r6g.large.search',        
+        // warmNodes: 2,
+        // warmInstanceType: 'ultrawarm1.medium.search',
+      },
+      accessPolicies: [OpenSearchAccessPolicy],      
+      ebs: {
+        volumeSize: 100,
+        volumeType: ec2.EbsDeviceVolumeType.GP3,
+      },
+      nodeToNodeEncryption: true,
+      encryptionAtRest: {
+        enabled: true,
+      },
+      zoneAwareness: {
+        enabled: true,
+        availabilityZoneCount: 3,        
+      }
+    });
+    new cdk.CfnOutput(this, `Domain-of-OpenSearch-for-${projectName}`, {
+      value: domain.domainArn,
+      description: 'The arm of OpenSearch Domain',
+    });
+    new cdk.CfnOutput(this, `Endpoint-of-OpenSearch-for-${projectName}`, {
+      value: 'https://'+domain.domainEndpoint,
+      description: 'The endpoint of OpenSearch Domain',
+    });
+    opensearch_url = 'https://'+domain.domainEndpoint;
+
+    const apiInvokePolicy = new iam.PolicyStatement({ 
+      // resources: ['arn:aws:execute-api:*:*:*'],
+      resources: ['*'],
+      actions: [
+        'execute-api:Invoke',
+        'execute-api:ManageConnections'
+      ],
+    }); 
+    
+    // Lambda - chat (websocket)
+    const roleLambdaDocument = new iam.Role(this, `role-lambda-chat-ws-for-${projectName}`, {
+      roleName: `role-lambda-chat-ws-for-${projectName}-${region}`,
+      assumedBy: new iam.CompositePrincipal(
+        new iam.ServicePrincipal("lambda.amazonaws.com"),
+        new iam.ServicePrincipal("bedrock.amazonaws.com"),
+      )
+    });
+    roleLambdaDocument.addManagedPolicy({
+      managedPolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole',
+    });
+    const BedrockPolicy = new iam.PolicyStatement({  // policy statement for sagemaker
+      resources: ['*'],
+      actions: ['bedrock:*'],
+    });        
+    roleLambdaDocument.attachInlinePolicy( // add bedrock policy
+      new iam.Policy(this, `bedrock-policy-lambda-chat-ws-for-${projectName}`, {
+        statements: [BedrockPolicy],
+      }),
+    );        
+    const lambdaInvokePolicy = new iam.PolicyStatement({ 
+      resources: ['*'],
+      actions: [
+        "lambda:InvokeFunction"
+      ],
+    });        
+    roleLambdaDocument.attachInlinePolicy( 
+      new iam.Policy(this, `lambda-invoke-policy-for-${projectName}`, {
+        statements: [lambdaInvokePolicy],
+      }),
+    );  
+
+    // S3 - Lambda(S3 event) - SQS(fifo) - Lambda(document)
+    // DLQ
+    let dlq:any[] = [];
+    for(let i=0;i<LLM_embedding.length;i++) {
+      dlq[i] = new sqs.Queue(this, 'DlqS3EventFifo'+i, {
+        visibilityTimeout: cdk.Duration.seconds(600),
+        queueName: `dlq-s3-event-for-${projectName}-${i}.fifo`,  
+        fifo: true,
+        contentBasedDeduplication: false,
+        deliveryDelay: cdk.Duration.millis(0),
+        retentionPeriod: cdk.Duration.days(14)
+      });
+    }
+
+    // SQS for S3 event (fifo) 
+    let queueUrl:string[] = [];
+    let queue:any[] = [];
+    for(let i=0;i<LLM_embedding.length;i++) {
+      queue[i] = new sqs.Queue(this, 'QueueS3EventFifo'+i, {
+        visibilityTimeout: cdk.Duration.seconds(600),
+        queueName: `queue-s3-event-for-${projectName}-${i}.fifo`,  
+        fifo: true,
+        contentBasedDeduplication: false,
+        deliveryDelay: cdk.Duration.millis(0),
+        retentionPeriod: cdk.Duration.days(2),
+        deadLetterQueue: {
+          maxReceiveCount: 1,
+          queue: dlq[i]
+        }
+      });
+      queueUrl.push(queue[i].queueUrl);
+    }
+    
+    // Lambda for s3 event manager
+    const lambdaS3eventManager = new lambda.Function(this, `lambda-s3-event-manager-for-${projectName}`, {
+      description: 'lambda for s3 event manager',
+      functionName: `lambda-s3-event-manager-for-${projectName}`,
+      handler: 'lambda_function.lambda_handler',
+      runtime: lambda.Runtime.PYTHON_3_11,
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda-s3-event-manager')),
+      timeout: cdk.Duration.seconds(60),      
+      environment: {
+        sqsFifoUrl: JSON.stringify(queueUrl),
+        nqueue: String(LLM_embedding.length)
+      }
+    });
+    for(let i=0;i<LLM_embedding.length;i++) {
+      queue[i].grantSendMessages(lambdaS3eventManager); // permision for SQS putItem
+    }
+
+    // Lambda for document manager
+    let lambdDocumentManager:any[] = [];
+    for(let i=0;i<LLM_embedding.length;i++) {
+      lambdDocumentManager[i] = new lambda.DockerImageFunction(this, `lambda-document-manager-for-${projectName}-${i}`, {
+        description: 'S3 document manager',
+        functionName: `lambda-document-manager-for-${projectName}-${i}`,
+        role: roleLambdaDocument,
+        code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '../../lambda-document-manager')),
+        timeout: cdk.Duration.seconds(600),
+        memorySize: 8192,
+        environment: {
+          s3_bucket: s3Bucket.bucketName,
+          s3_prefix: s3_prefix,
+          opensearch_account: opensearch_account,
+          opensearch_passwd: opensearch_passwd,
+          opensearch_url: opensearch_url,
+          roleArn: roleLambdaDocument.roleArn,
+          path: 'https://'+distribution_docs.domainName+'/', 
+          sqsUrl: queueUrl[i],
+          max_object_size: String(max_object_size),
+          supportedFormat: supportedFormat,
+          LLM_for_chat: JSON.stringify(LLM_for_chat),
+          LLM_for_multimodal:JSON.stringify(LLM_for_multimodal),
+          LLM_embedding: JSON.stringify(LLM_embedding),
+          enableParallelSummary: enableParallelSummary,
+          enableParentDocumentRetrival: enableParentDocumentRetrival,
+          enableHybridSearch: enableHybridSearch,
+          vectorIndexName: vectorIndexName
+        }
+      });         
+      s3Bucket.grantReadWrite(lambdDocumentManager[i]); // permission for s3
+      lambdDocumentManager[i].addEventSource(new SqsEventSource(queue[i])); // permission for SQS
+    }
+    
+    // s3 event source
+    const s3PutEventSource = new lambdaEventSources.S3EventSource(s3Bucket, {
+      events: [
+        s3.EventType.OBJECT_CREATED_PUT,
+        s3.EventType.OBJECT_REMOVED_DELETE,
+        s3.EventType.OBJECT_CREATED_COMPLETE_MULTIPART_UPLOAD
+      ],
+      filters: [
+        { prefix: s3_prefix+'/' },
+      ]
+    });
+    lambdaS3eventManager.addEventSource(s3PutEventSource); 
     
     // EC2 Role    
     const ec2Role = new iam.Role(this, `role-ec2-for-${projectName}`, {
@@ -272,10 +398,6 @@ export class CdkAgenticRagStack extends cdk.Stack {
       }),
     );  
 
-    const BedrockPolicy = new iam.PolicyStatement({  
-      resources: ['*'],
-      actions: ['bedrock:*'],
-    });        
     ec2Role.attachInlinePolicy( // add bedrock policy
       new iam.Policy(this, `bedrock-policy-ec2-for-${projectName}`, {
         statements: [BedrockPolicy],
@@ -291,30 +413,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
         statements: [ec2Policy],
       }),
     );
-
-    // pass role
-    const passRoleResourceArn = knowledge_base_role.roleArn;
-    const passRolePolicy = new iam.PolicyStatement({  
-      resources: [passRoleResourceArn],      
-      actions: ['iam:PassRole'],
-    });      
-    ec2Role.attachInlinePolicy( // add pass role policy
-      new iam.Policy(this, `pass-role-for-${projectName}`, {
-      statements: [passRolePolicy],
-      }), 
-    );  
-
-    // aoss
-    const aossRolePolicy = new iam.PolicyStatement({  
-      resources: ['*'],      
-      actions: ['aoss:*'],
-    }); 
-    ec2Role.attachInlinePolicy( 
-      new iam.Policy(this, `aoss-policy-for-${projectName}`, {
-        statements: [aossRolePolicy],
-      }),
-    ); 
-
+    
     // getRole
     const getRolePolicy = new iam.PolicyStatement({  
       resources: ['*'],      
@@ -470,33 +569,19 @@ export class CdkAgenticRagStack extends cdk.Stack {
       value: 'https://'+distribution.domainName,
       description: 'The domain name of the Distribution'
     });   
-
-    // cloudfront for sharing s3
-    const distribution_sharing = new cloudFront.Distribution(this, `sharing-for-${projectName}`, {
-      defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(s3Bucket),
-        allowedMethods: cloudFront.AllowedMethods.ALLOW_ALL,
-        cachePolicy: cloudFront.CachePolicy.CACHING_DISABLED,
-        viewerProtocolPolicy: cloudFront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      },
-      priceClass: cloudFront.PriceClass.PRICE_CLASS_200,  
-    });
-    new cdk.CfnOutput(this, `distribution-sharing-DomainName-for-${projectName}`, {
-      value: 'https://'+distribution_sharing.domainName,
-      description: 'The domain name of the Distribution Sharing',
-    });
-
+    
     const userData = ec2.UserData.forLinux();
 
     const environment = {
       "projectName": projectName,
       "accountId": accountId,
       "region": region,
-      "knowledge_base_role": knowledge_base_role.roleArn,
-      "collectionArn": collectionArn,
-      "opensearch_url": OpenSearchCollection.attrCollectionEndpoint,
       "s3_arn": s3Bucket.bucketArn,
-      "sharing_url": 'https://'+distribution_sharing.domainName
+      "sharing_url": 'https://'+distribution_docs.domainName,
+      "opensearch_url": opensearch_url,
+      "LLM_embedding": JSON.stringify(LLM_embedding),
+      "opensearch_account": opensearch_account,
+      "opensearch_passwd": opensearch_passwd,      
     }    
     new cdk.CfnOutput(this, `environment-for-${projectName}`, {
       value: JSON.stringify(environment),
