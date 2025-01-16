@@ -96,6 +96,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
 
     // cloudfront for sharing s3
     const distribution_docs = new cloudFront.Distribution(this, `sharing-for-${projectName}`, {
+      comment: `CloudFront-for-${projectName} (Document)`,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(s3Bucket),
         allowedMethods: cloudFront.AllowedMethods.ALLOW_ALL,
