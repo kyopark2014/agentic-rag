@@ -125,21 +125,6 @@ export class CdkAgenticRagStack extends cdk.Stack {
       managedPolicyArn: 'arn:aws:iam::aws:policy/AWSLambdaExecute',
     }); 
 
-    // API Gateway
-    const api = new apiGateway.RestApi(this, `api-chatbot-for-${projectName}`, {
-      description: 'API Gateway for chatbot',
-      endpointTypes: [apiGateway.EndpointType.REGIONAL],
-      restApiName: 'rest-api-for-'+projectName,      
-      binaryMediaTypes: ['application/pdf', 'text/plain', 'text/csv'], 
-      deployOptions: {
-        stageName: stage,
-
-        // logging for debug
-        // loggingLevel: apiGateway.MethodLoggingLevel.INFO, 
-        // dataTraceEnabled: true,
-      },
-    });  
-
     // opensearch
     // Permission for OpenSearch
     const domainName = projectName
