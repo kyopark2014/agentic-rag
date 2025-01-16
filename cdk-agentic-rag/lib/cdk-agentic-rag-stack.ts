@@ -16,7 +16,7 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
-const projectName = `langgraph-nova`; 
+const projectName = `agentic-rag`; 
 const region = process.env.CDK_DEFAULT_REGION;    
 const accountId = process.env.CDK_DEFAULT_ACCOUNT;
 const targetPort = 8080;
