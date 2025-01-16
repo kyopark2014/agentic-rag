@@ -1,0 +1,10 @@
+{
+    "projectName":"langgraph-nova",
+    "accountId":"262976740991",
+    "region":"us-west-2",
+    "knowledge_base_role":"arn:aws:iam::262976740991:role/role-knowledge-base-for-langgraph-nova-us-west-2",
+    "collectionArn":"arn:aws:aoss:us-west-2:262976740991:collection/c9pv05w7lhy5l5o13dge",
+    "opensearch_url":"https://c9pv05w7lhy5l5o13dge.us-west-2.aoss.amazonaws.com",
+    "s3_arn":"arn:aws:s3:::storage-for-langgraph-nova-262976740991-us-west-2",
+    "sharing_url": "https://d33neeoc6fkool.cloudfront.net/"
+ }
