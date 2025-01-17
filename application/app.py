@@ -76,10 +76,11 @@ if uploaded_file and clear_button==False:
     print('file_url: ', file_url) 
 
     msg = chat.get_summary_of_uploaded_file(file_name)
-
-    st.write(msg)
     print('msg: ', msg)
 
+    st.session_state.messages.append({"role": "assistant", "content": msg})
+    if debugMode != "Debug":
+        st.rerun()
 
 # Initialize chat history
 if "messages" not in st.session_state:

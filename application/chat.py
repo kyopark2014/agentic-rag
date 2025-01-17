@@ -721,7 +721,9 @@ def load_csv_document(s3_file_name):
 
     return docs
 
-def get_summary(chat, docs):    
+def get_summary(docs):    
+    chat = get_chat()
+
     text = ""
     for doc in docs:
         text = text + doc
@@ -762,6 +764,7 @@ def load_document(file_type, s3_file_name):
     s3r = boto3.resource("s3")
     doc = s3r.Object(s3_bucket, s3_prefix+'/'+s3_file_name)
     
+    contents = ""
     if file_type == 'pdf':
         contents = doc.get()['Body'].read()
         reader = PyPDF2.PdfReader(BytesIO(contents))
@@ -784,13 +787,13 @@ def load_document(file_type, s3_file_name):
         separators=["\n\n", "\n", ".", " ", ""],
         length_function = len,
     ) 
-
     texts = text_splitter.split_text(new_contents) 
-    print('texts[0]: ', texts[0])
+    if texts:
+        print('texts[0]: ', texts[0])
     
     return texts
 
-def summary_of_code(chat, code, mode):
+def summary_of_code(code, mode):
     if mode == 'py':
         system = (
             "다음의 <article> tag에는 python code가 있습니다."
@@ -812,6 +815,8 @@ def summary_of_code(chat, code, mode):
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     # print('prompt: ', prompt)
     
+    chat = get_chat()
+
     chain = prompt | chat    
     try: 
         result = chain.invoke(
@@ -907,8 +912,7 @@ def get_summary_of_uploaded_file(file_name):
             contexts.append(doc.page_content)
         print('contexts: ', contexts)
     
-        chat = get_chat()
-        msg = get_summary(chat, contexts)
+        msg = get_summary(contexts)
 
     elif file_type == 'pdf' or file_type == 'txt' or file_type == 'md' or file_type == 'pptx' or file_type == 'docx':
         texts = load_document(file_type, file_name)
@@ -933,24 +937,24 @@ def get_summary_of_uploaded_file(file_name):
             contexts.append(doc.page_content)
         print('contexts: ', contexts)
 
-        msg = get_summary(chat, contexts)
+        msg = get_summary(contexts)
         
     elif file_type == 'py' or file_type == 'js':
         s3r = boto3.resource("s3")
-        doc = s3r.Object(s3_bucket, s3_prefix+'/'+object)
+        doc = s3r.Object(s3_bucket, s3_prefix+'/'+file_name)
         
         contents = doc.get()['Body'].read().decode('utf-8')
         
         #contents = load_code(file_type, object)                
                         
-        msg = summary_of_code(chat, contents, file_type)                  
+        msg = summary_of_code(contents, file_type)                  
         
     elif file_type == 'png' or file_type == 'jpeg' or file_type == 'jpg':
-        print('multimodal: ', object)
+        print('multimodal: ', file_name)
         
         s3_client = boto3.client('s3') 
             
-        image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+object)
+        image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+file_name)
         # print('image_obj: ', image_obj)
         
         image_content = image_obj['Body'].read()
