@@ -11,6 +11,7 @@ Nova 모델는 동급 모델대비 빠르고, 높은 가성비와 함께 훌륭�
 
 전체적인 architecture는 아래와 같습니다. Streamlit이 설치된 EC2는 private subnet에 있고, CloudFront-ALB를 이용해 외부와 연결됩니다. RAG는 OpenSearch를 활용하고 있습니다. 인터넷 검색은 tavily를 사용하고 날씨 API를 추가로 활용합니다.
 
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/01e722bc-18ac-4d99-9905-1305f35fc2b6" />
 
 
 ## 상세 구현
