@@ -557,11 +557,11 @@ export class CdkAgenticRagStack extends cdk.Stack {
     });   
     
     const userData = ec2.UserData.forLinux();
-
     const environment = {
       "projectName": projectName,
       "accountId": accountId,
       "region": region,
+      "s3_bucket": s3Bucket.bucketName,
       "s3_arn": s3Bucket.bucketArn,
       "sharing_url": 'https://'+distribution_docs.domainName,
       "opensearch_url": opensearch_url,
@@ -604,7 +604,7 @@ EOF'`,
       `json='${JSON.stringify(environment)}' && echo "$json">/home/config.json`,
       `runuser -l ec2-user -c 'cd && git clone https://github.com/kyopark2014/${projectName}'`,
       `runuser -l ec2-user -c 'pip install streamlit streamlit_chat beautifulsoup4 pytz tavily-python'`,        
-      `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community langgraph opensearch-py'`,
+      `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community langgraph opensearch-py PyPDF2'`,
       'systemctl enable streamlit.service',
       'systemctl start streamlit'
     ];    
