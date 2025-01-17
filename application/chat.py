@@ -120,7 +120,7 @@ index_name = projectName
 opensearch_url = config["opensearch_url"] if "opensearch_url" in config else None
 if opensearch_url is None:
     raise Exception ("No OpenSearch URL")
-LLM_embedding = config["LLM_embedding"] if "LLM_embedding" in config else None
+LLM_embedding = json.loads(config["LLM_embedding"]) if "LLM_embedding" in config else None
 if LLM_embedding is None:
     raise Exception ("No Embedding!")
 opensearch_account = config["opensearch_account"] if "opensearch_account" in config else None
@@ -132,6 +132,7 @@ if opensearch_passwd is None:
 enableParentDocumentRetrival = 'true'
 enableHybridSearch = 'true'
 multi_region = 'enable'
+selected_embedding = 0
 
 def initiate():
     global userId
@@ -165,6 +166,7 @@ def get_chat():
     global selected_chat
     
     profile = parallel_processing_models[selected_chat]
+    # print('profile: ', profile)
         
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
@@ -359,7 +361,58 @@ def traslation(chat, text, input_language, output_language):
         raise Exception ("Not able to request to LLM")
 
     return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
+
+def upload_to_s3(file_bytes, file_name):
+    """
+    Upload a file to S3 and return the URL
+    """
+    try:
+        s3_client = boto3.client(
+            service_name='s3',
+            region_name=bedrock_region
+        )
+
+        # Generate a unique file name to avoid collisions
+        #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        #unique_id = str(uuid.uuid4())[:8]
+        #s3_key = f"uploaded_images/{timestamp}_{unique_id}_{file_name}"
+        s3_key = f"{s3_prefix}/{file_name}"
+
+        if file_name.lower().endswith((".jpg", ".jpeg")):
+            content_type = "image/jpeg"
+        elif file_name.lower().endswith((".pdf")):
+            content_type = "application/pdf"
+        elif file_name.lower().endswith((".txt")):
+            content_type = "text/plain"
+        elif file_name.lower().endswith((".csv")):
+            content_type = "text/csv"
+        elif file_name.lower().endswith((".ppt", ".pptx")):
+            content_type = "application/vnd.ms-powerpoint"
+        elif file_name.lower().endswith((".doc", ".docx")):
+            content_type = "application/msword"
+        elif file_name.lower().endswith((".xls")):
+            content_type = "application/vnd.ms-excel"
+        elif file_name.lower().endswith((".py")):
+            content_type = "text/x-python"
+        elif file_name.lower().endswith((".js")):
+            content_type = "application/javascript"
+        elif file_name.lower().endswith((".md")):
+            content_type = "text/markdown"
+        elif file_name.lower().endswith((".png")):
+            content_type = "image/png"
+        
+        s3_client.put_object(
+            Bucket=bucketName, Key=s3_key, Body=file_bytes, ContentType=content_type
+        )
+
+        url = f"https://{bucketName}.s3.amazonaws.com/{s3_key}"
+        return url
     
+    except Exception as e:
+        err_msg = f"Error uploading to S3: {str(e)}"
+        print(err_msg)
+        return None
+
 def grade_document_based_on_relevance(conn, question, doc, models, selected):     
     chat = get_parallel_processing_chat(models, selected)
     retrieval_grader = get_retrieval_grader(chat)
@@ -666,8 +719,6 @@ def general_conversation(query):
         
     return stream
 
-
-
 ####################### LangChain #######################
 # Basic RAG (OpenSearch)
 #########################################################
@@ -686,9 +737,9 @@ os_client = OpenSearch(
 
 def get_embedding():
     global selected_embedding
-    profile = LLM_embedding[selected_embedding]
-    bedrock_region =  profile['bedrock_region']
-    model_id = profile['model_id']
+    embedding_profile = LLM_embedding[selected_embedding]
+    bedrock_region =  embedding_profile['bedrock_region']
+    model_id = embedding_profile['model_id']
     print(f'selected_embedding: {selected_embedding}, bedrock_region: {bedrock_region}, model_id: {model_id}')
     
     # bedrock   
@@ -912,13 +963,27 @@ def get_answer_using_opensearch(text, st, debugMode):
     chat = get_chat()
 
     # retrieve
+    if debugMode == "Debug":
+        st.info(f"검색을 수행합니다. 검색어: {text}")
     relevant_docs = retrieve_documents_from_opensearch(text, top_k=4)
         
-    # grade
+    # grade   
+    if debugMode == "Debug":
+        st.info(f"가져온 문서를 평가하고 있습니다.")        
     filtered_docs = grade_documents(text, relevant_docs) # grading    
     filtered_docs = check_duplication(filtered_docs) # check duplication
+
+    global reference_docs
+    if len(filtered_docs):
+        reference_docs += filtered_docs 
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
             
     # generate
+    if debugMode == "Debug":
+        st.info(f"결과를 생성중입니다.")
     relevant_context = ""
     for document in relevant_docs:
         relevant_context = relevant_context + document.page_content + "\n\n"        
@@ -951,23 +1016,29 @@ def get_answer_using_opensearch(text, st, debugMode):
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     # print('prompt: ', prompt)
                        
-    chain = prompt | chat
+    chain = prompt | chat 
     
     msg = ""    
     try: 
-        msg = chain.invoke(
+        output = chain.invoke(
             {
                 "context": relevant_context,
                 "input": text,
             }
         )
-        
+
+        msg = output.content
+        print('msg: ', msg)
+
+        if msg.find('<result>')!=-1:
+            msg = msg[msg.find('<result>')+8:msg.find('</result>')]
+
     except Exception:
         err_msg = traceback.format_exc()
         print('error message: ', err_msg)                    
         raise Exception ("Not able to request to LLM")
       
-    return msg
+    return msg+reference
 
 
 ####################### LangGraph #######################
@@ -1085,6 +1156,7 @@ def search_by_opensearch(keyword: str) -> str:
     keyword: search keyword
     return: the technical information of keyword
     """    
+    global reference_docs
     
     print('keyword: ', keyword)
     keyword = keyword.replace('\'','')
@@ -1098,6 +1170,9 @@ def search_by_opensearch(keyword: str) -> str:
 
     # grade  
     filtered_docs = grade_documents(keyword, relevant_docs)
+
+    if len(filtered_docs):
+        reference_docs += filtered_docs
         
     for i, doc in enumerate(filtered_docs):
         if len(doc.page_content)>=100:
@@ -1117,8 +1192,6 @@ def search_by_opensearch(keyword: str) -> str:
         print('relevant_context: ', relevant_context)
         
     return relevant_context
-
-
     
 @tool
 def search_by_tavily(keyword: str) -> str:
@@ -1324,7 +1397,7 @@ def run_agent_executor(query, st, debugMode):
     print("msg: ", msg)
 
     for i, doc in enumerate(reference_docs):
-        print(f"--> {i}: {doc}")
+        print(f"--> reference {i}: {doc}")
         
     reference = ""
     if reference_docs:
@@ -1435,9 +1508,7 @@ def get_hallucination_grader():
     hallucination_grader = hallucination_prompt | structured_llm_grade_hallucination
     return hallucination_grader
     
-
-
-def run_corrective_rag(connectionId, requestId, query):
+def run_corrective_rag(query, st, debugMode):
     class State(TypedDict):
         question : str
         generation : str
@@ -1447,6 +1518,9 @@ def run_corrective_rag(connectionId, requestId, query):
     def retrieve_node(state: State):
         print("###### retrieve ######")
         question = state["question"]
+
+        if debugMode=="Debug":
+            st.info(f"검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
@@ -1456,6 +1530,9 @@ def run_corrective_rag(connectionId, requestId, query):
         print("###### grade_documents ######")
         question = state["question"]
         documents = state["documents"]
+        
+        if debugMode=="Debug":
+            st.info(f"가져온 문서를 평가하고 있습니다.")       
         
         # Score each doc
         filtered_docs = []
@@ -1519,6 +1596,9 @@ def run_corrective_rag(connectionId, requestId, query):
         print("###### generate ######")
         question = state["question"]
         documents = state["documents"]
+
+        if debugMode=="Debug":
+            st.info(f"답변을 생성하고 있습니다.")       
         
         # RAG generation
         rag_chain = get_reg_chain(isKorean(question))
@@ -1532,6 +1612,9 @@ def run_corrective_rag(connectionId, requestId, query):
         print("###### rewrite ######")
         question = state["question"]
         documents = state["documents"]
+
+        if debugMode=="Debug":
+            st.info(f"질문을 새로 생성하고 있습니다.")       
         
         # Prompt
         question_rewriter = get_rewrite()
@@ -1545,6 +1628,9 @@ def run_corrective_rag(connectionId, requestId, query):
         print("###### web_search ######")
         question = state["question"]
         documents = state["documents"]
+
+        if debugMode=="Debug":
+            st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
         documents = web_search(question, documents)
             
@@ -1584,9 +1670,7 @@ def run_corrective_rag(connectionId, requestId, query):
             
     inputs = {"question": query}
     config = {
-        "recursion_limit": 50,
-        "requestId": requestId,
-        "connectionId": connectionId
+        "recursion_limit": 50
     }
     
     for output in app.stream(inputs, config):   
@@ -1595,8 +1679,12 @@ def run_corrective_rag(connectionId, requestId, query):
             # print("value: ", value)
             
     #print('value: ', value)
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
         
-    return value["generation"].content
+    return value["generation"].content + reference
 
 ####################### LangGraph #######################
 # Self RAG
@@ -1657,7 +1745,7 @@ class GraphConfig(TypedDict):
     max_retries: int    
     max_count: int
 
-def run_self_rag(connectionId, requestId, query):
+def run_self_rag(query, st, debugMode):
     class State(TypedDict):
         question : str
         generation : str
@@ -1669,6 +1757,9 @@ def run_self_rag(connectionId, requestId, query):
         print('state: ', state)
         print("###### retrieve ######")
         question = state["question"]
+
+        if debugMode=="Debug":
+            st.info(f"검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
@@ -1679,6 +1770,9 @@ def run_self_rag(connectionId, requestId, query):
         question = state["question"]
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
+
+        if debugMode=="Debug":
+            st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
         
         # RAG generation
         rag_chain = get_reg_chain(isKorean(question))
@@ -1693,6 +1787,9 @@ def run_self_rag(connectionId, requestId, query):
         question = state["question"]
         documents = state["documents"]
         count = state["count"] if state.get("count") is not None else -1
+
+        if debugMode=="Debug":
+            st.info(f"가져온 문서를 평가하고 있습니다.")       
         
         print("start grading...")
         print("grade_state: ", grade_state)
@@ -1753,6 +1850,9 @@ def run_self_rag(connectionId, requestId, query):
         print("###### rewrite ######")
         question = state["question"]
         documents = state["documents"]
+
+        if debugMode=="Debug":
+            st.info(f"질문을 새로 생성합니다.")       
         
         # Prompt
         question_rewriter = get_rewrite()
@@ -1767,15 +1867,24 @@ def run_self_rag(connectionId, requestId, query):
         question = state["question"]
         documents = state["documents"]
         generation = state["generation"]
-        
+
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
         hallucination_grader = get_hallucination_grader()
-        score = hallucination_grader.invoke(
-            {"documents": documents, "generation": generation}
-        )
-        hallucination_grade = score.binary_score
+
+        hallucination_grade = "no"
+        for attempt in range(3):   
+            print('attempt: ', attempt)
+            try:
+                score = hallucination_grader.invoke(
+                    {"documents": documents, "generation": generation}
+                )
+                hallucination_grade = score.binary_score
+                break
+            except Exception:
+                err_msg = traceback.format_exc()
+                print('error message: ', err_msg)       
         
         print("hallucination_grade: ", hallucination_grade)
         print("retries: ", retries)
@@ -1842,9 +1951,7 @@ def run_self_rag(connectionId, requestId, query):
         
     inputs = {"question": query}
     config = {
-        "recursion_limit": 50,
-        "requestId": requestId,
-        "connectionId": connectionId
+        "recursion_limit": 50
     }
     
     for output in app.stream(inputs, config):   
@@ -1853,13 +1960,17 @@ def run_self_rag(connectionId, requestId, query):
             # print("value: ", value)
             
     #print('value: ', value)
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
         
-    return value["generation"].content
+    return value["generation"].content + reference
 
 ####################### LangGraph #######################
-# Self-Corrective RAG
+# Self Corrective RAG
 #########################################################
-def run_self_corrective_rag(connectionId, requestId, query):
+def run_self_corrective_rag(query, st, debugMode):
     class State(TypedDict):
         messages: Annotated[list[BaseMessage], add_messages]
         question: str
@@ -1872,6 +1983,9 @@ def run_self_corrective_rag(connectionId, requestId, query):
         print("###### retrieve ######")
         question = state["question"]
         
+        if debugMode=="Debug":
+            st.info(f"검색을 수행합니다. 검색어: {question}")
+        
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
         return {"documents": docs, "question": question, "web_fallback": True}
@@ -1881,7 +1995,10 @@ def run_self_corrective_rag(connectionId, requestId, query):
         question = state["question"]
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
-        
+
+        if debugMode=="Debug":
+            st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
+                
         # RAG generation
         rag_chain = get_reg_chain(isKorean(question))
         
@@ -1897,6 +2014,9 @@ def run_self_corrective_rag(connectionId, requestId, query):
         print("###### rewrite ######")
         question = state["question"]
         documents = state["documents"]
+        
+        if debugMode=="Debug":
+            st.info(f"질문을 새로 생성하고 있습니다.")      
 
         # Prompt
         question_rewriter = get_rewrite()
@@ -1913,6 +2033,9 @@ def run_self_corrective_rag(connectionId, requestId, query):
         generation = state["candidate_answer"]
         web_fallback = state["web_fallback"]
         
+        if debugMode == "Debug":
+            st.info(f"가져온 문서를 평가하고 있습니다.")       
+        
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
@@ -1921,11 +2044,21 @@ def run_self_corrective_rag(connectionId, requestId, query):
         
         print("---Hallucination?---")    
         hallucination_grader = get_hallucination_grader()
-        score = hallucination_grader.invoke(
-            {"documents": documents, "generation": generation}
-        )
-        hallucination_grade = score.binary_score
+        hallucination_grade = "no"
+
+        for attempt in range(3):   
+            print('attempt: ', attempt)
             
+            try:        
+                score = hallucination_grader.invoke(
+                    {"documents": documents, "generation": generation}
+                )
+                hallucination_grade = score.binary_score
+                break
+            except Exception:
+                err_msg = traceback.format_exc()
+                print('error message: ', err_msg)
+
         # Check hallucination
         if hallucination_grade == "no":
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
@@ -1936,10 +2069,19 @@ def run_self_corrective_rag(connectionId, requestId, query):
 
         # Check question-answering
         answer_grader = get_answer_grader()    
-        score = answer_grader.invoke({"question": question, "generation": generation})
-        answer_grade = score.binary_score     
-        print("answer_grade: ", answer_grade)
-        
+
+        for attempt in range(3):   
+            print('attempt: ', attempt)
+            try: 
+                score = answer_grader.invoke({"question": question, "generation": generation})
+                answer_grade = score.binary_score     
+                print("answer_grade: ", answer_grade)
+            
+                break
+            except Exception:
+                err_msg = traceback.format_exc()
+                print('error message: ', err_msg)   
+            
         if answer_grade == "yes":
             print("---DECISION: GENERATION ADDRESSES QUESTION---")
             return "finalize_response"
@@ -1951,6 +2093,9 @@ def run_self_corrective_rag(connectionId, requestId, query):
         print("###### web_search ######")
         question = state["question"]
         documents = state["documents"]
+        
+        if debugMode=="Debug":
+            st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
         documents = web_search(question, documents)
             
@@ -1998,9 +2143,7 @@ def run_self_corrective_rag(connectionId, requestId, query):
     
     inputs = {"question": query}
     config = {
-        "recursion_limit": 50,
-        "requestId": requestId,
-        "connectionId": connectionId
+        "recursion_limit": 50
     }
     
     for output in app.stream(inputs, config):   
@@ -2010,6 +2153,10 @@ def run_self_corrective_rag(connectionId, requestId, query):
             
     #print('value: ', value)
     #print('content: ', value["messages"][-1].content)
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
         
-    return value["messages"][-1].content
+    return value["messages"][-1].content + reference
 

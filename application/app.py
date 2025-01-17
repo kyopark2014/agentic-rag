@@ -48,7 +48,16 @@ with st.sidebar:
         ('Debug', 'Normal')
     )
 
-    st.success("Connected to Nova Pro", icon="💚")
+    # debug Mode
+    langMode = st.selectbox(
+        '🖊️ 사용 모델을 선택하세요',
+        ('Nova Pro', 'Nova Lite', 'Claude Sonnet 3.5', 'Claude Sonnet 3.0', 'Claude Haiku 3.5')
+    )
+
+    st.subheader("📋 문서 업로드")
+    uploaded_file = st.file_uploader("이미지를 요약할 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
+
+    st.success(f"Connected to {langMode}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
     # print('clear_button: ', clear_button)
 
@@ -56,6 +65,15 @@ st.title('🔮 '+ mode)
 
 if clear_button==True:
     chat.initiate()
+
+# Preview the uploaded image in the sidebar
+file_name = ""
+if uploaded_file and clear_button==False:
+    # st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
+
+    file_name = uploaded_file.name
+    file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name)
+    print('file_url: ', file_url) 
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -112,7 +130,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_rag_with_knowledge_base(prompt, st, debugMode)        
+                response = chat.get_answer_using_opensearch(prompt, st, debugMode)        
                 st.write(response)
                 print('response: ', response)
 
@@ -141,7 +159,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         
         elif mode == 'Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_basic_rag(prompt, st, debugMode)
+                response = chat.run_corrective_rag(prompt, st, debugMode)
                 st.write(response)
                 print('response: ', response)
 
@@ -158,7 +176,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Self RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_planning(prompt, st, debugMode)
+                response = chat.run_self_rag(prompt, st, debugMode)
                 st.write(response)
                 print('response: ', response)
 
@@ -175,7 +193,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Self Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_long_form_writing_agent(prompt, st, debugMode)
+                response = chat.run_self_corrective_rag(prompt, st, debugMode)
                 st.write(response)
                 print('response: ', response)
 
