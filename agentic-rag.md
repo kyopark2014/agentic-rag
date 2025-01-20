@@ -48,3 +48,51 @@
 
 
 ![image](https://github.com/user-attachments/assets/319a13d3-01f6-44c2-92cb-4b11d3bf5c7c)
+
+
+## Four Essential Agentic Design Patterns
+
+[Four Essential Agentic Design Patterns](https://www.linkedin.com/posts/jillanisofttech_aiagents-futuretech-aipatterns-activity-7282996261299847168-5OlF/?utm_source=share&utm_medium=member_android)을 참조합니다.
+
+4개의 중요 agent design 패턴들은 아래와 같습니다. 
+
+1. Reflection Pattern
+
+This pattern enables AI agents to learn from their experiences through:
+
+- Initial response generation
+- Self-analysis of outputs
+- Continuous improvement through iteration
+
+The reflection mechanism allows agents to enhance their decision-making capabilities over time, leading to more refined and accurate responses.
+
+2. Planning Pattern
+
+This strategic approach helps agents handle complex tasks by:
+- Breaking down large tasks into manageable components
+- Setting clear objectives and goals
+- Implementing dynamic strategy adjustments
+- Replanning when necessary
+
+This pattern excels in scenarios requiring systematic problem-solving and adaptability.
+
+3. Tool Use Pattern
+
+The Tool Use Pattern extends AI capabilities by:
+
+- Integrating with external tools and resources
+- Managing multiple tool interactions
+- Processing information from various sources
+
+This framework allows agents to perform tasks beyond basic text generation, significantly expanding their practical applications.
+
+4. Multi-Agent Pattern
+
+This collaborative pattern enables:
+- Coordination between specialized agents
+- Efficient task delegation
+- Combined expertise in complex problems
+
+Perfect for scenarios requiring diverse skills, like software development or project management.
+
+![image](https://github.com/user-attachments/assets/6b72494a-57bb-4cc8-a77a-94e5ecccd518)
