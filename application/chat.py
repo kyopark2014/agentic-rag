@@ -120,7 +120,7 @@ if opensearch_passwd is None:
     raise Exception ("Not available OpenSearch!")
 s3_bucket = config["s3_bucket"] if "s3_bucket" in config else None
 if s3_bucket is None:
-    raise Exception ("Not storage!")
+    raise Exception ("No storage!")
 
 enableParentDocumentRetrival = 'true'
 enableHybridSearch = 'true'
@@ -129,13 +129,15 @@ selected_embedding = 0
 
 def update(langMode):    
     global modelName        
+    
     if langMode != modelName:
         modelName = langMode
         print('modelName: ', modelName)
 
-    global parallel_processing_models, number_of_models
-    parallel_processing_models = info.get_model_info(modelName)
-    number_of_models = len(parallel_processing_models)
+        global parallel_processing_models, number_of_models, selected_chat    
+        parallel_processing_models = info.get_model_info(modelName)
+        number_of_models = len(parallel_processing_models)
+        selected_chat = 0
 
 def initiate():
     global userId
