@@ -352,3 +352,5 @@ sudo runuser -l ec2-user -c "/home/ec2-user/.local/bin/streamlit run /home/ec2-u
 [Nova Pro User Guide](https://docs.aws.amazon.com/pdfs/nova/latest/userguide/nova-ug.pdf)
 
 [7 Agentic RAG System Architectures](https://www.linkedin.com/posts/greg-coquillo_7-agentic-rag-system-architectures-ugcPost-7286098967434534912-F2Ek/?utm_source=share&utm_medium=member_android)
+
+[how multi-agent agentic RAG systems work](https://www.linkedin.com/posts/pavan-belagatti_lets-understand-how-multi-agent-agentic-activity-7286068649101008896-DmDB/?utm_source=share&utm_medium=member_android)
