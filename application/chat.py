@@ -13,6 +13,7 @@ import logging
 import base64
 import operator
 import csv
+import info # user defined info such as models
 
 from io import BytesIO
 from PIL import Image
@@ -94,29 +95,14 @@ parallel_processing = 'enable'
 doc_prefix = s3_prefix+'/'
 useEnhancedSearch = False
 
-parallel_processing_models = [   # Nova Pro
-    {   
-        "bedrock_region": "us-west-2", # Oregon
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    }
-]
 selected_chat = 0
-number_of_models = len(parallel_processing_models)
-STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
 
 userId = "demo"
+modelName = "Nova Pro"
+modelType = "nova"
 map_chain = dict() 
+parallel_processing_models = info.get_model_info(modelName)
+number_of_models = len(parallel_processing_models)
 
 # RAG
 index_name = projectName
@@ -141,10 +127,20 @@ enableHybridSearch = 'true'
 multi_region = 'enable'
 selected_embedding = 0
 
+def update(langMode):    
+    global modelName        
+    if langMode != modelName:
+        modelName = langMode
+        print('modelName: ', modelName)
+
+    global parallel_processing_models, number_of_models
+    parallel_processing_models = info.get_model_info(modelName)
+    number_of_models = len(parallel_processing_models)
+
 def initiate():
     global userId
     global memory_chain
-
+    
     userId = uuid.uuid4().hex
     print('userId: ', userId)
 
@@ -171,7 +167,7 @@ def save_chat_history(text, msg):
 
 def get_chat():
     global selected_chat
-    
+
     profile = parallel_processing_models[selected_chat]
     # print('profile: ', profile)
         
@@ -179,6 +175,11 @@ def get_chat():
     modelId = profile['model_id']
     maxOutputTokens = 4096
     print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+
+    if profile['model_type'] == 'nova':
+        STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
+    elif profile['model_type'] == 'claude':
+        STOP_SEQUENCE = "\n\nHuman:" 
                           
     # bedrock   
     boto3_bedrock = boto3.client(
@@ -218,6 +219,11 @@ def get_parallel_processing_chat(models, selected):
     modelId = profile['model_id']
     maxOutputTokens = 4096
     print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+
+    if profile['model_type'] == 'nova':
+        STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
+    elif profile['model_type'] == 'claude':
+        STOP_SEQUENCE = "\n\nHuman:" 
                           
     # bedrock   
     boto3_bedrock = boto3.client(
@@ -1274,6 +1280,65 @@ def retrieve_documents_from_opensearch(query, top_k):
 
     return relevant_docs
 
+def get_rag_prompt(text):
+    if modelType == "nova":
+        if isKorean(text)==True:
+            system = (
+                "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
+                "다음의 Reference texts을 이용하여 user의 질문에 답변합니다."
+                "모르는 질문을 받으면 솔직히 모른다고 말합니다."
+                "답변의 이유를 풀어서 명확하게 설명합니다."
+                "결과는 <result> tag를 붙여주세요."
+            )
+        else: 
+            system = (
+                "You will be acting as a thoughtful advisor."
+                "Provide a concise answer to the question at the end using reference texts." 
+                "If you don't know the answer, just say that you don't know, don't try to make up an answer."
+                "You will only answer in text format, using markdown format is not allowed."
+                "Put it in <result> tags."
+            )    
+    
+        human = (
+            "Question: {input}"
+
+            "Reference texts: "
+            "{context}"
+        ) 
+        
+    elif modelType == "clause":
+        if isKorean(text)==True:
+            system = (
+                "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
+                "다음의 <context> tag안의 참고자료를 이용하여 상황에 맞는 구체적인 세부 정보를 충분히 제공합니다." 
+                "모르는 질문을 받으면 솔직히 모른다고 말합니다."
+                "답변의 이유를 풀어서 명확하게 설명합니다."
+                "결과는 <result> tag를 붙여주세요."
+            )
+        else: 
+            system = (
+                "You will be acting as a thoughtful advisor."
+                "Here is pieces of context, contained in <context> tags." 
+                "If you don't know the answer, just say that you don't know, don't try to make up an answer."
+                "You will only answer in text format, using markdown format is not allowed."
+                "Put it in <result> tags."
+            )    
+
+        human = (
+            "<question>"
+            "{question}"
+            "</question>"
+
+            "<context>"
+            "{context}"
+            "</context>"
+        )
+
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+    # print('prompt: ', prompt)
+
+    return prompt
+
 def get_answer_using_opensearch(text, st, debugMode):
     chat = get_chat()
 
@@ -1304,34 +1369,9 @@ def get_answer_using_opensearch(text, st, debugMode):
         relevant_context = relevant_context + document.page_content + "\n\n"        
     # print('relevant_context: ', relevant_context)
 
-    if isKorean(text)==True:
-        system = (
-            "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
-            "다음의 Reference texts을 이용하여 user의 질문에 답변합니다."
-            "모르는 질문을 받으면 솔직히 모른다고 말합니다."
-            "답변의 이유를 풀어서 명확하게 설명합니다."
-            "결과는 <result> tag를 붙여주세요."
-            "답변은 markdown 포맷을 사용하지 않습니다."
-        )
-    else: 
-        system = (
-            "You will be acting as a thoughtful advisor."
-            "Provide a concise answer to the question at the end using reference texts." 
-            "If you don't know the answer, just say that you don't know, don't try to make up an answer."
-            "You will only answer in text format, using markdown format is not allowed."
-            "Put it in <result> tags."
-        )    
-    human = (
-        "Question: {input}"
-
-        "Reference texts: "
-        "{context}"
-    )
-    
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-    # print('prompt: ', prompt)
+    rag_prompt = get_rag_prompt(text)
                        
-    chain = prompt | chat 
+    chain = rag_prompt | chat 
     
     msg = ""    
     try: 

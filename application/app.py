@@ -53,6 +53,7 @@ with st.sidebar:
         '🖊️ 사용 모델을 선택하세요',
         ('Nova Pro', 'Nova Lite', 'Claude Sonnet 3.5', 'Claude Sonnet 3.0', 'Claude Haiku 3.5')
     )
+    chat.update(langMode)
 
     st.subheader("📋 문서 업로드")
     uploaded_file = st.file_uploader("이미지를 요약할 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
@@ -61,7 +62,7 @@ with st.sidebar:
     clear_button = st.button("대화 초기화", key="clear")
     # print('clear_button: ', clear_button)
 
-st.title('🔮 '+ mode)
+st.title('🔮 '+ mode)  
 
 if clear_button==True:
     chat.initiate()
