@@ -96,3 +96,27 @@ This collaborative pattern enables:
 Perfect for scenarios requiring diverse skills, like software development or project management.
 
 ![image](https://github.com/user-attachments/assets/6b72494a-57bb-4cc8-a77a-94e5ecccd518)
+
+
+## 비교표
+
+[Evolution of RAG: From Standard to Speculative Architectures](https://www.linkedin.com/posts/jillanisofttech_the-evolution-of-rag-from-standard-to-speculative-activity-7284477800542056448-nJ2X/?utm_source=share&utm_medium=member_android)을 참조합니다.
+
+1) Standard RAG: The Foundation
+
+The conventional RAG approach follows a straightforward path: retrieve relevant documents and feed them directly into a large language model (LLM). While this laid the groundwork for knowledge-enhanced AI systems, it faces a significant challenge. The LLM must simultaneously process retrieved documents and generate coherent responses, often leading to inefficient resource utilization and potential accuracy issues.
+
+2) Self-Reflective RAG: Adding Metacognition
+
+Building upon the standard architecture, Self-Reflective RAG introduces a crucial capability: self-awareness. The system learns to evaluate the relevance of retrieved documents, essentially developing a form of metacognition. This advancement allows for more refined document selection, though it requires additional instruction-tuning and computational resources to maintain this reflective capability.
+
+3) Corrective RAG: The Quality Control Layer
+
+Corrective RAG takes document evaluation a step further by incorporating a dedicated Natural Language Inference (NLI) model. This external validator classifies documents as Correct, Ambiguous, or Incorrect before they reach the main LLM. While this enhanced quality control improves accuracy, it introduces additional processing overhead that can impact response times.
+
+4) Speculative RAG: The Game-Changer
+
+Enter Speculative RAG, representing a paradigm shift in RAG architecture. Its innovative two-tier approach separates the knowledge-processing pipeline into distinct phases:
+
+<img width="606" alt="image" src="https://github.com/user-attachments/assets/3dcd9b1d-cbcb-4db3-9207-eec0d2bd991c" />
+
