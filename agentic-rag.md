@@ -24,15 +24,15 @@
 
 “Let me get rid of the information you don’t need before giving you a final answer”
 
--Self-Reflective RAG
+- Self-Reflective RAG
 
 “Let me check, does it even make sense? Hold on, let me see if anything needs correcting before answering you.”
 
--Speculative RAG
+- Speculative RAG
 
 “I remember seeing this before from that source, but let me doublecheck before confirming for you.”
 
--Self Route Agentic RAG
+- Self Route Agentic RAG
 
 “Sit back and relax, I know the best way to look for this answer. Be right back.”
 
