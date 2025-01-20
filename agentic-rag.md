@@ -37,3 +37,14 @@
 “Sit back and relax, I know the best way to look for this answer. Be right back.”
 
 
+## Multi agent에 대한 흥미로운 그림
+
+[how multi-agent agentic RAG systems work](https://www.linkedin.com/posts/pavan-belagatti_lets-understand-how-multi-agent-agentic-activity-7286068649101008896-DmDB/?utm_source=share&utm_medium=member_android)을 참조합니다. 
+
+- single agent에 비하여 복잡한 workflow와 여러 종류의 query 를 지원
+
+- agent가 central orchestration을 수행하고 특정 목적에 최적화된 검색 agent들을 관리
+
+
+
+![image](https://github.com/user-attachments/assets/319a13d3-01f6-44c2-92cb-4b11d3bf5c7c)
