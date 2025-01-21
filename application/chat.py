@@ -2322,8 +2322,7 @@ def run_self_rag(query, st, debugMode):
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             if debugMode=="Debug":
-                st.info(f"환각(halucination)입니다.")
-            
+                st.info(f"환각(halucination)입니다.")            
             reference_docs = []
             return "not supported" if retries < max_retries else "not available"
         
@@ -2449,7 +2448,6 @@ def run_self_corrective_rag(query, st, debugMode):
     def rewrite_node(state: State, config):
         print("###### rewrite ######")
         question = state["question"]
-        documents = state["documents"]
         
         if debugMode=="Debug":
             st.info(f"질문을 새로 생성하고 있습니다.")      
@@ -2460,7 +2458,7 @@ def run_self_corrective_rag(query, st, debugMode):
         better_question = question_rewriter.invoke({"question": question})
         print("better_question: ", better_question.question)
 
-        return {"question": better_question.question, "documents": documents}
+        return {"question": better_question.question, "documents": []}
     
     def grade_generation(state: State, config):
         print("###### grade_generation ######")
