@@ -1366,10 +1366,6 @@ def get_answer_using_opensearch(text, st, debugMode):
     if debugMode == "Debug":
         st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
 
-    reference = ""
-    if reference_docs:
-        reference = get_references(reference_docs)
-            
     # generate
     if debugMode == "Debug":
         st.info(f"결과를 생성중입니다.")
@@ -1398,9 +1394,12 @@ def get_answer_using_opensearch(text, st, debugMode):
         err_msg = traceback.format_exc()
         print('error message: ', err_msg)                    
         raise Exception ("Not able to request to LLM")
-      
-    return msg+reference
+    
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
 
+    return msg+reference
 
 ####################### LangGraph #######################
 # Agentic RAG
@@ -1517,7 +1516,6 @@ def search_by_opensearch(keyword: str) -> str:
     keyword: search keyword
     return: the technical information of keyword
     """    
-    global reference_docs
     
     print('keyword: ', keyword)
     keyword = keyword.replace('\'','')
@@ -1532,6 +1530,7 @@ def search_by_opensearch(keyword: str) -> str:
     # grade  
     filtered_docs = grade_documents(keyword, relevant_docs)
 
+    global reference_docs
     if len(filtered_docs):
         reference_docs += filtered_docs
         
@@ -1810,8 +1809,6 @@ def get_rewrite():
     return question_rewriter
 
 def web_search(question):
-    global reference_docs
-    
     # Web search
     search = TavilySearchResults(
         max_results=3,
@@ -1877,7 +1874,7 @@ def get_hallucination_grader():
         
     hallucination_grader = hallucination_prompt | structured_llm_grade_hallucination
     return hallucination_grader
-    
+
 def run_corrective_rag(query, st, debugMode):
     class State(TypedDict):
         question : str
@@ -2097,32 +2094,6 @@ def run_corrective_rag(query, st, debugMode):
 #########################################################
 MAX_RETRIES = 2 # total 3
 
-# def get_rag_prompt(langMode):
-#     if langMode:
-#         system = (
-#             "Reference Text를 이용하여 상황에 맞는 구체적인 세부 정보를 충분히 제공합니다."
-#             "모르는 질문을 받으면 솔직히 모른다고 말합니다."    
-#         )
-#     else: 
-#         system = (
-#             "Here is pieces of context, contained in <context> tags."
-#             "Provide a concise answer to the question at the end."
-#             "If you don't know the answer, just say that you don't know, don't try to make up an answer."
-#         )
-        
-#     human = (
-#         "Question: {question}"
-
-#         "Reference Text:"
-#         "{context}"
-#     )
-        
-#     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-                    
-#     chat = get_chat()
-#     rag_chain = prompt | chat
-#     return rag_chain
-
 def get_answer_grader():
     class GradeAnswer(BaseModel):
         """Binary score to assess answer addresses question."""
@@ -2292,6 +2263,8 @@ def run_self_rag(query, st, debugMode):
         documents = state["documents"]
         generation = state["generation"]
 
+        global reference_docs
+
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
@@ -2319,6 +2292,9 @@ def run_self_rag(query, st, debugMode):
 
         answer_grader = get_answer_grader()    
         if hallucination_grade == "yes":
+            if debugMode=="Debug":
+                st.info(f"환각이 아닙니다.")
+
             print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
 
             # Check appropriate answer
@@ -2339,11 +2315,16 @@ def run_self_rag(query, st, debugMode):
                 print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
                 if debugMode=="Debug":
                     st.info(f"적절하지 않은 답변입니다.")
+                
+                
+                reference_docs = []
                 return "not useful" if retries < max_retries else "not available"
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             if debugMode=="Debug":
                 st.info(f"환각(halucination)입니다.")
+            
+            reference_docs = []
             return "not supported" if retries < max_retries else "not available"
         
     def build():
@@ -2487,10 +2468,9 @@ def run_self_corrective_rag(query, st, debugMode):
         documents = state["documents"]
         generation = state["candidate_answer"]
         web_fallback = state["web_fallback"]
-        
-        if debugMode == "Debug":
-            st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.") 
-        
+
+        global reference_docs
+                
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
@@ -2520,8 +2500,14 @@ def run_self_corrective_rag(query, st, debugMode):
 
         if hallucination_grade == "no":
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
+            if debugMode=="Debug":
+                st.info(f"환각(halucination)입니다.")                        
+            reference_docs = []
             return "generate" if retries < max_retries else "websearch"
 
+        if debugMode=="Debug":
+            st.info(f"환각이 아닙니다.")
+        
         print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
         print("---GRADE GENERATION vs QUESTION---")
 
@@ -2545,9 +2531,14 @@ def run_self_corrective_rag(query, st, debugMode):
             
         if answer_grade == "yes":
             print("---DECISION: GENERATION ADDRESSES QUESTION---")
+            if debugMode=="Debug":
+                st.info(f"적절한 답변입니다.")
             return "finalize_response"
         else:
             print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION (Not Answer)---")
+            if debugMode=="Debug":
+                st.info(f"적절하지 않은 답변입니다.")            
+            reference_docs = []
             return "rewrite" if retries < max_retries else "websearch"
 
     def web_search_node(state: State, config):
