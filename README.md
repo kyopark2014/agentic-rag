@@ -285,6 +285,119 @@ tool_node = ToolNode(tools)
 ```
 
 
+### Corrective RAG
+
+[Corrective RAG(CRAG)](https://github.com/kyopark2014/langgraph-agent/blob/main/corrective-rag-agent.md)는 retrival/grading 후에 질문을 rewrite한 후 인터넷 검색에서 얻어진 결과로 RAG의 성능을 강화하는 방법입니다. 
+
+![image](https://github.com/user-attachments/assets/27228159-b307-4588-8a8a-61d8deaa90e3)
+
+CRAG의 workflow는 아래와 같습니다. 
+
+```python
+workflow = StateGraph(State)
+    
+# Define the nodes
+workflow.add_node("retrieve", retrieve_node)  
+workflow.add_node("grade_documents", grade_documents_node)
+workflow.add_node("generate", generate_node)
+workflow.add_node("rewrite", rewrite_node)
+workflow.add_node("websearch", web_search_node)
+
+# Build graph
+workflow.set_entry_point("retrieve")
+workflow.add_edge("retrieve", "grade_documents")
+workflow.add_conditional_edges(
+    "grade_documents",
+    decide_to_generate,
+    {
+        "rewrite": "rewrite",
+        "generate": "generate",
+    },
+)
+workflow.add_edge("rewrite", "websearch")
+workflow.add_edge("websearch", "generate")
+workflow.add_edge("generate", END)
+```
+
+### Self RAG
+
+[Self RAG](https://github.com/kyopark2014/langgraph-agent/blob/main/self-rag.md)는 retrieve/grading 후에 generation을 수행하는데, grading의 결과에 따라 필요시 rewtire후 retrieve를 수행하며, 생성된 결과가 hallucination인지, 답변이 적절한지를 판단하여 필요시 rewtire / retrieve를 반복합니다. 
+
+![image](https://github.com/user-attachments/assets/b1f2db6c-f23f-4382-86f6-0fa7d3fe0595)
+
+Self RAG의 workflow는 아래와 같습니다.
+
+```python
+workflow = StateGraph(State)
+            
+# Define the nodes
+workflow.add_node("retrieve", retrieve_node)  
+workflow.add_node("grade_documents", grade_documents_node)
+workflow.add_node("generate", generate_node)
+workflow.add_node("rewrite", rewrite_node)
+
+# Build graph
+workflow.set_entry_point("retrieve")
+workflow.add_edge("retrieve", "grade_documents")
+workflow.add_conditional_edges(
+    "grade_documents",
+    decide_to_generate,
+    {
+        "no document": "rewrite",
+        "document": "generate",
+        "not available": "generate",
+    },
+)
+workflow.add_edge("rewrite", "retrieve")
+workflow.add_conditional_edges(
+    "generate",
+    grade_generation,
+    {
+        "not supported": "generate",
+        "useful": END,
+        "not useful": "rewrite",
+        "not available": END,
+    },
+)
+```
+
+### Self Corrective RAG
+
+Self Corrective RAG는 Self RAG처럼 retrieve / generate 후에 hallucination인지 답변이 적절한지 확인후 필요시 질문을 rewrite하거나 인터넷 검색을 통해 RAG의 성능을 향상시키는 방법입니다. 
+
+![image](https://github.com/user-attachments/assets/9a18f7f9-0249-42f7-983e-c5a7f9d18682)
+
+Self Corrective RAG의 workflow는 아래와 같습니다. 
+
+```python
+workflow = StateGraph(State)
+            
+# Define the nodes
+workflow.add_node("retrieve", retrieve_node)  
+workflow.add_node("generate", generate_node) 
+workflow.add_node("rewrite", rewrite_node)
+workflow.add_node("websearch", web_search_node)
+workflow.add_node("finalize_response", finalize_response_node)
+
+# Build graph
+workflow.set_entry_point("retrieve")
+workflow.add_edge("retrieve", "generate")
+workflow.add_edge("rewrite", "retrieve")
+workflow.add_edge("websearch", "generate")
+workflow.add_edge("finalize_response", END)
+
+workflow.add_conditional_edges(
+    "generate",
+    grade_generation,
+    {
+        "generate": "generate",
+        "websearch": "websearch",
+        "rewrite": "rewrite",
+        "finalize_response": "finalize_response",
+    },
+)
+```
+
 
 ### 활용 방법
 
