@@ -191,7 +191,8 @@ print(stream.content)
 
 아래와 같이 activity diagram을 이용하여 node/edge/conditional edge로 구성되는 tool use 방식의 agent를 구현할 수 있습니다.
 
-<img width="261" alt="image" src="https://github.com/user-attachments/assets/31202a6a-950f-44d6-b50e-644d28012d8f" />
+<img width="300" alt="image" src="https://github.com/user-attachments/assets/59c8dc05-c79c-4f63-b1ab-964dec259203"/>
+
 
 Tool use 방식 agent의 workflow는 아래와 같습니다. Fuction을 선택하는 call model 노드과 실행하는 tool 노드로 구성됩니다. 선택된 tool의 결과에 따라 cycle형태로 추가 실행을 하거나 종료하면서 결과를 전달할 수 있습니다.
 
