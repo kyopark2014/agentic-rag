@@ -6,12 +6,8 @@ import re
 import requests
 import datetime
 import PyPDF2
-import functools
 import uuid
-import time
-import logging
 import base64
-import operator
 import csv
 import info # user defined info such as models
 
