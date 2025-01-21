@@ -577,26 +577,27 @@ def retrieve_documents_from_tavily(query, top_k):
         output = search.invoke(query)
         print('tavily output: ', output)
 
-        #if output.find("429 Client Error: Too Many Requests for url"):
-        #    raise Exception ("Tavily error: Too Many Requests for url")
-            
-        print(f"--> tavily query: {query}")
-        for i, result in enumerate(output):
-            print(f"{i}: {result}")
-            if result:
-                content = result.get("content")
-                url = result.get("url")
-                
-                relevant_documents.append(
-                    Document(
-                        page_content=content,
-                        metadata={
-                            'name': 'WWW',
-                            'url': url,
-                            'from': 'tavily'
-                        },
-                    )
-                )                
+        if output[:9] == "HTTPError":
+            print('output: ', output)
+            raise Exception ("Not able to request to tavily")
+        else:        
+            print(f"--> tavily query: {query}")
+            for i, result in enumerate(output):
+                print(f"{i}: {result}")
+                if result:
+                    content = result.get("content")
+                    url = result.get("url")
+                    
+                    relevant_documents.append(
+                        Document(
+                            page_content=content,
+                            metadata={
+                                'name': 'WWW',
+                                'url': url,
+                                'from': 'tavily'
+                            },
+                        )
+                    )                
     
     except Exception:
         err_msg = traceback.format_exc()
@@ -1292,7 +1293,6 @@ def get_rag_prompt(text):
                 "다음의 Reference texts을 이용하여 user의 질문에 답변합니다."
                 "모르는 질문을 받으면 솔직히 모른다고 말합니다."
                 "답변의 이유를 풀어서 명확하게 설명합니다."
-                "결과는 <result> tag를 붙여주세요."
             )
         else: 
             system = (
@@ -1300,7 +1300,6 @@ def get_rag_prompt(text):
                 "Provide a concise answer to the question at the end using reference texts." 
                 "If you don't know the answer, just say that you don't know, don't try to make up an answer."
                 "You will only answer in text format, using markdown format is not allowed."
-                "Put it in <result> tags."
             )    
     
         human = (
@@ -1351,7 +1350,7 @@ def get_answer_using_opensearch(text, st, debugMode):
 
     # retrieve
     if debugMode == "Debug":
-        st.info(f"검색을 수행합니다. 검색어: {text}")
+        st.info(f"RAG 검색을 수행합니다. 검색어: {text}")        
     relevant_docs = retrieve_documents_from_opensearch(text, top_k=4)
         
     # grade   
@@ -1579,26 +1578,31 @@ def search_by_tavily(keyword: str) -> str:
                     
         try: 
             output = search.invoke(keyword)
-            print('tavily output: ', output)
-            
-            for result in output:
-                print('result: ', result)
-                if result:
-                    content = result.get("content")
-                    url = result.get("url")
-                    
-                    reference_docs.append(
-                        Document(
-                            page_content=content,
-                            metadata={
-                                'name': 'WWW',
-                                'url': url,
-                                'from': 'tavily'
-                            },
-                        )
-                    )                
-                    answer = answer + f"{content}, URL: {url}\n"
-        
+            if output[:9] == "HTTPError":
+                print('output: ', output)
+                raise Exception ("Not able to request to tavily")
+            else:        
+                print('tavily output: ', output)
+                if output == "HTTPError('429 Client Error: Too Many Requests for url: https://api.tavily.com/search')":            
+                    raise Exception ("Not able to request to tavily")
+                
+                for result in output:
+                    print('result: ', result)
+                    if result:
+                        content = result.get("content")
+                        url = result.get("url")
+                        
+                        reference_docs.append(
+                            Document(
+                                page_content=content,
+                                metadata={
+                                    'name': 'WWW',
+                                    'url': url,
+                                    'from': 'tavily'
+                                },
+                            )
+                        )                
+                        answer = answer + f"{content}, URL: {url}\n"        
         except Exception:
             err_msg = traceback.format_exc()
             print('error message: ', err_msg)           
@@ -1805,52 +1809,49 @@ def get_rewrite():
     question_rewriter = re_write_prompt | structured_llm_rewriter
     return question_rewriter
 
-def web_search(question, documents):
+def web_search(question):
     global reference_docs
     
     # Web search
-    web_search_tool = TavilySearchResults(
-            max_results=3,
-            include_answer=True,
-            include_raw_content=True,
-            api_wrapper=tavily_api_wrapper,
-            search_depth="advanced", # "basic"
-            # include_domains=["google.com", "naver.com"]
-        )
+    search = TavilySearchResults(
+        max_results=3,
+        include_answer=True,
+        include_raw_content=True,
+        api_wrapper=tavily_api_wrapper,
+        search_depth="advanced", # "basic"
+        # include_domains=["google.com", "naver.com"]
+    )
+        
+    docs = []
+    try: 
+        output = search.invoke(question)
+        if output[:9] == "HTTPError":
+            print('output: ', output)
+            raise Exception ("Not able to request to tavily")
+        else:
+            for result in output:
+                print('result: ', result)
+
+                if result:
+                    content = result.get("content")
+                    url = result.get("url")
+                    
+                    docs.append(
+                        Document(
+                            page_content=content,
+                            metadata={
+                                'name': 'WWW',
+                                'url': url,
+                                'from': 'tavily'
+                            },
+                        )
+                    )
+    except Exception:
+        err_msg = traceback.format_exc()
+        print('error message: ', err_msg)           
+        # raise Exception ("Not able to request to tavily")   
     
-    docs = web_search_tool.invoke({"query": question})
-    # print('web_search: ', len(docs))
-    
-    for d in docs:
-        print("d: ", d)
-        if 'content' in d:
-            web_results = "\n".join(d["content"])
-            
-    #web_results = "\n".join([d["content"] for d in docs])
-    web_results = Document(page_content=web_results)
-    # print("web_results: ", web_results)
-    
-    if documents is not None:
-        documents.append(web_results)
-    else:
-        documents = [web_results]
-    
-    # for reference
-    for d in docs:
-        content = d.get("content")
-        url = d.get("url")
-                
-        reference_docs.append(
-            Document(
-                page_content=content,
-                metadata={
-                    'name': 'WWW',
-                    'url': url,
-                    'from': 'tavily'
-                },
-            )
-        )
-    return documents
+    return docs
 
 def get_hallucination_grader():    
     class GradeHallucinations(BaseModel):
@@ -1889,8 +1890,7 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
 
         if debugMode=="Debug":
-            st.info(f"RAG 검색을 수행합니다. 검색어: {question}")
-        
+            st.info(f"RAG 검색을 수행합니다. 검색어: {question}")        
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
         return {"documents": docs, "question": question}
@@ -1934,7 +1934,7 @@ def run_corrective_rag(query, st, debugMode):
                         # We set a flag to indicate that we want to run web search
                         web_search = "Yes"
                         continue
-            print('len(docments): ', len(filtered_docs))
+            print('len(documents): ', len(filtered_docs))
             print('web_search: ', web_search)
             
         # elif grade_state == "PRIORITY_SEARCH":
@@ -1993,7 +1993,11 @@ def run_corrective_rag(query, st, debugMode):
         output = result.content
         if output.find('<result>')!=-1:
             output = output[output.find('<result>')+8:output.find('</result>')]
-            
+
+        if len(documents):
+            global reference_docs
+            reference_docs += documents
+        
         return {"generation": output}
 
     def rewrite_node(state: State, config):
@@ -2020,7 +2024,17 @@ def run_corrective_rag(query, st, debugMode):
         if debugMode=="Debug":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
-        documents = web_search(question, documents)
+        docs = web_search(question)
+        # print('docs: ', docs)
+
+        if debugMode == "Debug":
+            st.info(f"{len(docs)}개의 문서가 검색되었습니다.")
+
+        for doc in docs:
+            documents.append(doc)
+        # print('documents: ', documents)
+
+       
             
         return {"question": question, "documents": documents}
 
@@ -2151,8 +2165,7 @@ def run_self_rag(query, st, debugMode):
         question = state["question"]
 
         if debugMode=="Debug":
-            st.info(f"검색을 수행합니다. 검색어: {question}")
-        
+            st.info(f"RAG 검색을 수행합니다. 검색어: {question}")        
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
         return {"documents": docs, "question": question}
@@ -2164,7 +2177,7 @@ def run_self_rag(query, st, debugMode):
         retries = state["retries"] if state.get("retries") is not None else -1
 
         if debugMode=="Debug":
-            st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
+            st.info(f"답변을 생성합니다.")
         
         # RAG generation
         rag_chain = get_rag_prompt(question)
@@ -2282,7 +2295,11 @@ def run_self_rag(query, st, debugMode):
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
-        hallucination_grader = get_hallucination_grader()
+        # Check Hallucination
+        if debugMode=="Debug":
+            st.info(f"환각(hallucination)인지 검토합니다.")
+
+        hallucination_grader = get_hallucination_grader()        
 
         hallucination_grade = "no"
         for attempt in range(3):   
@@ -2300,11 +2317,14 @@ def run_self_rag(query, st, debugMode):
         print("hallucination_grade: ", hallucination_grade)
         print("retries: ", retries)
 
-        # Check hallucination
         answer_grader = get_answer_grader()    
         if hallucination_grade == "yes":
             print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
-            # Check question-answering
+
+            # Check appropriate answer
+            if debugMode=="Debug":
+                st.info(f"적절한 답변인지 검토합니다.")
+
             print("---GRADE GENERATION vs QUESTION---")
             score = answer_grader.invoke({"question": question, "generation": generation})
             answer_grade = score.binary_score        
@@ -2312,12 +2332,18 @@ def run_self_rag(query, st, debugMode):
 
             if answer_grade == "yes":
                 print("---DECISION: GENERATION ADDRESSES QUESTION---")
+                if debugMode=="Debug":
+                    st.info(f"적절한 답변입니다.")
                 return "useful" 
             else:
                 print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
+                if debugMode=="Debug":
+                    st.info(f"적절하지 않은 답변입니다.")
                 return "not useful" if retries < max_retries else "not available"
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
+            if debugMode=="Debug":
+                st.info(f"환각(halucination)입니다.")
             return "not supported" if retries < max_retries else "not available"
         
     def build():
@@ -2399,7 +2425,7 @@ def run_self_corrective_rag(query, st, debugMode):
         question = state["question"]
         
         if debugMode=="Debug":
-            st.info(f"검색을 수행합니다. 검색어: {question}")
+            st.info(f"RAG 검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
@@ -2412,7 +2438,7 @@ def run_self_corrective_rag(query, st, debugMode):
         retries = state["retries"] if state.get("retries") is not None else -1
 
         if debugMode=="Debug":
-            st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
+            st.info(f"답변을 생성합니다.")
                 
         # RAG generation
         rag_chain = get_rag_prompt(question)
@@ -2469,8 +2495,12 @@ def run_self_corrective_rag(query, st, debugMode):
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
         if not web_fallback:
-            return "finalize_response"
-        
+            return "finalize_response"        
+                
+        # Check hallucination
+        if debugMode=="Debug":
+            st.info(f"환각(hallucination)인지 검토합니다.")
+
         print("---Hallucination?---")    
         hallucination_grader = get_hallucination_grader()
         hallucination_grade = "no"
@@ -2488,7 +2518,6 @@ def run_self_corrective_rag(query, st, debugMode):
                 err_msg = traceback.format_exc()
                 print('error message: ', err_msg)
 
-        # Check hallucination
         if hallucination_grade == "no":
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
             return "generate" if retries < max_retries else "websearch"
@@ -2496,7 +2525,10 @@ def run_self_corrective_rag(query, st, debugMode):
         print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
         print("---GRADE GENERATION vs QUESTION---")
 
-        # Check question-answering
+        # Check appropriate answer
+        if debugMode=="Debug":
+            st.info(f"적절한 답변인지 검토합니다.")
+        
         answer_grader = get_answer_grader()    
 
         for attempt in range(3):   
@@ -2526,7 +2558,13 @@ def run_self_corrective_rag(query, st, debugMode):
         if debugMode=="Debug":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
-        documents = web_search(question, documents)
+        docs = web_search(question)
+        if debugMode == "Debug":
+            st.info(f"{len(docs)}개의 문서가 검색되었습니다.")
+
+        for doc in docs:
+            documents.append(doc)
+        # print('documents: ', documents)
             
         return {"question": question, "documents": documents}
 

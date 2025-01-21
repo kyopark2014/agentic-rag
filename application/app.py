@@ -127,7 +127,7 @@ elif mode == 'Corrective RAG':
     col2.image(url)    
 elif mode == 'Self RAG':
     col1, col2, col3 = st.columns([0.1, 2.0, 0.1])
-    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-rag.png"
+    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-rag2.png"
     col2.image(url)
 elif mode == 'Self Corrective RAG':
     col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
