@@ -116,6 +116,19 @@ if clear_button or "messages" not in st.session_state:
     st.rerun()
 
     chat.clear_chat_history()
+
+if mode == 'Agentic RAG':
+    col1, col2, col3 = st.columns([0.1, 0.3, 0.1])
+    col2.image("./contents/agentic-rag.png")
+elif mode == 'Corrective RAG':
+    col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
+    col2.image("./contents/corrective-rag.png")
+elif mode == 'Self RAG':
+    col1, col2, col3 = st.columns([0.1, 2.0, 0.1])
+    col2.image("./contents/self-rag.png")
+elif mode == 'Self Corrective RAG':
+    col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
+    col2.image("./contents/self-corrective-rag.png")
         
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
@@ -166,6 +179,8 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 chat.save_chat_history(prompt, response)
         
         elif mode == 'Corrective RAG':
+            
+
             with st.status("thinking...", expanded=True, state="running") as status:
                 response = chat.run_corrective_rag(prompt, st, debugMode)
                 st.write(response)
