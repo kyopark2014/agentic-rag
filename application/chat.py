@@ -551,10 +551,12 @@ def check_duplication(docs):
             continue
         contentList.append(doc.page_content)
         updated_docs.append(doc)            
-    length_updateed_docs = len(updated_docs)     
+    length_updated_docs = len(updated_docs)     
     
-    if length_original == length_updateed_docs:
+    if length_original == length_updated_docs:
         print('no duplication')
+    else:
+        print('length of updated relevant_docs: ', length_updated_docs)
     
     return updated_docs
 
@@ -1302,7 +1304,7 @@ def get_rag_prompt(text):
             )    
     
         human = (
-            "Question: {input}"
+            "Question: {question}"
 
             "Reference texts: "
             "{context}"
@@ -1339,7 +1341,10 @@ def get_rag_prompt(text):
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     # print('prompt: ', prompt)
 
-    return prompt
+    chat = get_chat()
+    rag_chain = prompt | chat
+
+    return rag_chain
 
 def get_answer_using_opensearch(text, st, debugMode):
     chat = get_chat()
@@ -1351,13 +1356,16 @@ def get_answer_using_opensearch(text, st, debugMode):
         
     # grade   
     if debugMode == "Debug":
-        st.info(f"가져온 문서를 평가하고 있습니다.")        
+        st.info(f"가져온 {len(relevant_docs)}개의 문서를 평가하고 있습니다.")     
     filtered_docs = grade_documents(text, relevant_docs) # grading    
     filtered_docs = check_duplication(filtered_docs) # check duplication
 
     global reference_docs
     if len(filtered_docs):
         reference_docs += filtered_docs 
+
+    if debugMode == "Debug":
+        st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
 
     reference = ""
     if reference_docs:
@@ -1371,25 +1379,22 @@ def get_answer_using_opensearch(text, st, debugMode):
         relevant_context = relevant_context + document.page_content + "\n\n"        
     # print('relevant_context: ', relevant_context)
 
-    rag_prompt = get_rag_prompt(text)
+    rag_chain = get_rag_prompt(text)
                        
-    chain = rag_prompt | chat 
-    
     msg = ""    
     try: 
-        output = chain.invoke(
+        result = rag_chain.invoke(
             {
-                "context": relevant_context,
-                "input": text,
+                "question": text,
+                "context": relevant_context                
             }
         )
+        print('result: ', result)
 
-        msg = output.content
-        print('msg: ', msg)
-
+        msg = result.content        
         if msg.find('<result>')!=-1:
             msg = msg[msg.find('<result>')+8:msg.find('</result>')]
-
+        
     except Exception:
         err_msg = traceback.format_exc()
         print('error message: ', err_msg)                    
@@ -1889,7 +1894,7 @@ def run_corrective_rag(query, st, debugMode):
         documents = state["documents"]
         
         if debugMode=="Debug":
-            st.info(f"가져온 문서를 평가하고 있습니다.")       
+            st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.")    
         
         # Score each doc
         filtered_docs = []
@@ -1929,6 +1934,11 @@ def run_corrective_rag(query, st, debugMode):
         #     filtered_docs = priority_search(question, documents, minDocSimilarity)
         else:  # OTHERS
             filtered_docs = documents
+
+        filtered_docs = check_duplication(filtered_docs) # check duplication
+
+        if debugMode == "Debug":
+            st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
         
         global reference_docs
         reference_docs += filtered_docs
@@ -1958,12 +1968,26 @@ def run_corrective_rag(query, st, debugMode):
             st.info(f"답변을 생성하고 있습니다.")       
         
         # RAG generation
-        rag_chain = get_reg_chain(isKorean(question))
+        rag_chain = get_rag_prompt(question)
+
+        relevant_context = ""
+        for document in documents:
+            relevant_context = relevant_context + document.page_content + "\n\n"        
+        # print('relevant_context: ', relevant_context)
         
-        generation = rag_chain.invoke({"context": documents, "question": question})
-        print('generation: ', generation.content)
+        result = rag_chain.invoke(
+            {
+                "question": question, 
+                "context": relevant_context
+            }
+        )
+        print('result: ', result)
+
+        output = result.content
+        if output.find('<result>')!=-1:
+            output = output[output.find('<result>')+8:output.find('</result>')]
             
-        return {"documents": documents, "question": question, "generation": generation}
+        return {"generation": output}
 
     def rewrite_node(state: State, config):
         print("###### rewrite ######")
@@ -2021,6 +2045,10 @@ def run_corrective_rag(query, st, debugMode):
         return workflow.compile()
 
     app = buildCorrectiveRAG()
+
+    global contentList, reference_docs
+    contentList = []
+    reference_docs = []
     
     global langMode
     langMode = isKorean(query)
@@ -2041,38 +2069,38 @@ def run_corrective_rag(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
         
-    return value["generation"].content + reference
+    return value["generation"] + reference
 
 ####################### LangGraph #######################
 # Self RAG
 #########################################################
 MAX_RETRIES = 2 # total 3
 
-def get_reg_chain(langMode):
-    if langMode:
-        system = (
-            "Reference Text를 이용하여 상황에 맞는 구체적인 세부 정보를 충분히 제공합니다."
-            "모르는 질문을 받으면 솔직히 모른다고 말합니다."    
-        )
-    else: 
-        system = (
-            "Here is pieces of context, contained in <context> tags."
-            "Provide a concise answer to the question at the end."
-            "If you don't know the answer, just say that you don't know, don't try to make up an answer."
-        )
+# def get_rag_prompt(langMode):
+#     if langMode:
+#         system = (
+#             "Reference Text를 이용하여 상황에 맞는 구체적인 세부 정보를 충분히 제공합니다."
+#             "모르는 질문을 받으면 솔직히 모른다고 말합니다."    
+#         )
+#     else: 
+#         system = (
+#             "Here is pieces of context, contained in <context> tags."
+#             "Provide a concise answer to the question at the end."
+#             "If you don't know the answer, just say that you don't know, don't try to make up an answer."
+#         )
         
-    human = (
-        "Question: {question}"
+#     human = (
+#         "Question: {question}"
 
-        "Reference Text:"
-        "{context}"
-    )
+#         "Reference Text:"
+#         "{context}"
+#     )
         
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+#     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
                     
-    chat = get_chat()
-    rag_chain = prompt | chat
-    return rag_chain
+#     chat = get_chat()
+#     rag_chain = prompt | chat
+#     return rag_chain
 
 def get_answer_grader():
     class GradeAnswer(BaseModel):
@@ -2132,12 +2160,26 @@ def run_self_rag(query, st, debugMode):
             st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
         
         # RAG generation
-        rag_chain = get_reg_chain(isKorean(question))
+        rag_chain = get_rag_prompt(question)
+
+        relevant_context = ""
+        for document in documents:
+            relevant_context = relevant_context + document.page_content + "\n\n"        
+        # print('relevant_context: ', relevant_context)
+            
+        result = rag_chain.invoke(
+            {
+                "question": question,
+                "context": relevant_context                
+            }
+        )
+        print('result: ', result)
+
+        output = result.content
+        if output.find('<result>')!=-1:
+            output = output[output.find('<result>')+8:output.find('</result>')]
         
-        generation = rag_chain.invoke({"context": documents, "question": question})
-        print('generation: ', generation.content)
-        
-        return {"documents": documents, "question": question, "generation": generation, "retries": retries + 1}
+        return {"generation": output, "retries": retries + 1}
             
     def grade_documents_node(state: State, config):
         print("###### grade_documents ######")
@@ -2146,7 +2188,7 @@ def run_self_rag(query, st, debugMode):
         count = state["count"] if state.get("count") is not None else -1
 
         if debugMode=="Debug":
-            st.info(f"가져온 문서를 평가하고 있습니다.")       
+            st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.")    
         
         print("start grading...")
         print("grade_state: ", grade_state)
@@ -2179,6 +2221,11 @@ def run_self_rag(query, st, debugMode):
         #     filtered_docs = priority_search(question, documents, minDocSimilarity)
         else:  # OTHERS
             filtered_docs = documents
+
+        filtered_docs = check_duplication(filtered_docs) # check duplication
+
+        if debugMode == "Debug":
+            st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
         
         global reference_docs
         reference_docs += filtered_docs
@@ -2305,6 +2352,10 @@ def run_self_rag(query, st, debugMode):
     
     global langMode
     langMode = isKorean(query)
+
+    global contentList, reference_docs
+    contentList = []
+    reference_docs = []
         
     inputs = {"question": query}
     config = {
@@ -2322,7 +2373,7 @@ def run_self_rag(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
         
-    return value["generation"].content + reference
+    return value["generation"] + reference
 
 ####################### LangGraph #######################
 # Self Corrective RAG
@@ -2357,15 +2408,29 @@ def run_self_corrective_rag(query, st, debugMode):
             st.info(f"관련 문서를 참조하여 답변을 생성합니다.")
                 
         # RAG generation
-        rag_chain = get_reg_chain(isKorean(question))
-        
-        generation = rag_chain.invoke({"context": documents, "question": question})
-        print('generation: ', generation.content)
+        rag_chain = get_rag_prompt(question)
+
+        relevant_context = ""
+        for document in documents:
+            relevant_context = relevant_context + document.page_content + "\n\n"        
+        # print('relevant_context: ', relevant_context)
+            
+        result = rag_chain.invoke(
+            {
+                "question": question,
+                "context": relevant_context                
+            }
+        )
+        print('result: ', result)
+
+        output = result.content
+        if output.find('<result>')!=-1:
+            output = output[output.find('<result>')+8:output.find('</result>')]
         
         global reference_docs
         reference_docs += documents
         
-        return {"retries": retries + 1, "candidate_answer": generation.content}
+        return {"retries": retries + 1, "candidate_answer": output}
 
     def rewrite_node(state: State, config):
         print("###### rewrite ######")
@@ -2391,7 +2456,7 @@ def run_self_corrective_rag(query, st, debugMode):
         web_fallback = state["web_fallback"]
         
         if debugMode == "Debug":
-            st.info(f"가져온 문서를 평가하고 있습니다.")       
+            st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.") 
         
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
@@ -2497,6 +2562,10 @@ def run_self_corrective_rag(query, st, debugMode):
 
     global langMode
     langMode = isKorean(query)
+
+    global contentList, reference_docs
+    contentList = []
+    reference_docs = []
     
     inputs = {"question": query}
     config = {

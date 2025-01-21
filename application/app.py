@@ -56,7 +56,7 @@ with st.sidebar:
     chat.update(langMode)
 
     st.subheader("📋 문서 업로드")
-    uploaded_file = st.file_uploader("이미지를 요약할 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
+    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
 
     st.success(f"Connected to {langMode}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
