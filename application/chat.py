@@ -1809,7 +1809,14 @@ def web_search(question, documents):
     global reference_docs
     
     # Web search
-    web_search_tool = TavilySearchResults(max_results=3)
+    web_search_tool = TavilySearchResults(
+            max_results=3,
+            include_answer=True,
+            include_raw_content=True,
+            api_wrapper=tavily_api_wrapper,
+            search_depth="advanced", # "basic"
+            # include_domains=["google.com", "naver.com"]
+        )
     
     docs = web_search_tool.invoke({"query": question})
     # print('web_search: ', len(docs))
@@ -1882,7 +1889,7 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
 
         if debugMode=="Debug":
-            st.info(f"검색을 수행합니다. 검색어: {question}")
+            st.info(f"RAG 검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
