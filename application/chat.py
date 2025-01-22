@@ -164,7 +164,7 @@ def save_chat_history(text, msg):
         memory_chain.chat_memory.add_ai_message(msg) 
 
 def get_chat():
-    global selected_chat
+    global selected_chat, modelType
 
     profile = parallel_processing_models[selected_chat]
     # print('profile: ', profile)
@@ -172,6 +172,7 @@ def get_chat():
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
     maxOutputTokens = 4096
+    modelType = profile['model_type']
     print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
 
     if profile['model_type'] == 'nova':
@@ -212,9 +213,11 @@ def get_chat():
     return chat
 
 def get_parallel_processing_chat(models, selected):
+    global modelType
     profile = models[selected]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
+    modelType = profile['model_type']
     maxOutputTokens = 4096
     print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}')
 
