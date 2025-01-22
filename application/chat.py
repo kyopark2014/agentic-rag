@@ -1308,7 +1308,7 @@ def get_rag_prompt(text):
             "{context}"
         ) 
         
-    elif modelType == "clause":
+    elif modelType == "claude":
         if isKorean(text)==True:
             system = (
                 "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
