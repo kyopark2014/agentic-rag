@@ -1,5 +1,7 @@
 import streamlit as st 
 import chat
+import time
+import uuid 
 
 mode_descriptions = {
     "일상적인 대화": [
@@ -43,32 +45,30 @@ with st.sidebar:
     # print('mode: ', mode)
 
     # debug Mode
-    debugMode = st.selectbox(
-        '🖊️ 디버그 모드를 설정하세요',
-        ('Debug', 'Normal')
-    )
-
-    # debug Mode
     modelName = st.selectbox(
         '🖊️ 사용 모델을 선택하세요',
         ('Nova Pro', 'Nova Lite', 'Claude Sonnet 3.5', 'Claude Sonnet 3.0', 'Claude Haiku 3.5')
     )
+    
+    # debug Mode
+    select_debugMode = st.checkbox('Debug Mode', value=True)
+    debugMode = 'Enable' if select_debugMode else 'Disable'
+    print('debugMode: ', debugMode)
 
     # debug Mode
-    multiRegion = st.selectbox(
-        '🖊️ Multi Region',
-        ('Disable', 'Enable')
-    )
+    select_multiRegion = st.checkbox('Multi Region', value=True)
+    multiRegion = 'Enable' if select_multiRegion else 'Disable'
+    print('multiRegion: ', multiRegion)
 
     # contextual embedding
-    contextualEmbedding = st.selectbox(
-        '🖊️ Contextual Embedding',
-        ('Disable', 'Enable')
-    )
-    chat.update(modelName, multiRegion, contextualEmbedding)
+    selected_contextualEmbedding = st.checkbox('Contextual Embedding', value=False)
+    contextualEmbedding = 'Enable' if selected_contextualEmbedding else 'Disable'
+    print('contextualEmbedding: ', contextualEmbedding)
+
+    chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
 
     st.subheader("📋 문서 업로드")
-    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
+    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=mode)
 
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
@@ -81,20 +81,28 @@ if clear_button==True:
 
 # Preview the uploaded image in the sidebar
 file_name = ""
+file_list = []
+
 if uploaded_file and clear_button==False:
-    # st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
+    if uploaded_file.name not in file_list:
+        file_name = uploaded_file.name
+        file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+        print('file_url: ', file_url) 
+        
+        progress_text = f"선택한 {file_name}을 업로드하고 파일 내용을 요약하고 있습니다..."
+        my_bar = st.sidebar.progress(0, text=progress_text)
 
-    file_name = uploaded_file.name
-    file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
-    print('file_url: ', file_url) 
+        for percent_complete in range(100):
+            time.sleep(0.2)
+            my_bar.progress(percent_complete + 1, text=progress_text)
+        # with st.spinner(f"선택한 {file_name}을 업로드하고 파일 내용을 요약하고 있습니다..."):
+        #     time.sleep(10)
 
-    msg = chat.get_summary_of_uploaded_file(file_name)
-    print('msg: ', msg)
+        msg = chat.get_summary_of_uploaded_file(file_name)
 
-    st.session_state.messages.append({"role": "assistant", "content": msg})
-    if debugMode != "Debug":
-        st.rerun()
-
+        st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
+        print('msg: ', msg)
+        
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -110,6 +118,13 @@ def display_chat_messages() -> None:
             st.markdown(message["content"])
 
 display_chat_messages()
+
+def show_references(reference_docs):
+    if debugMode == "Enable" and reference_docs:
+        with st.expander(f"답변에서 참조한 {len(reference_docs)}개의 문서입니다."):
+            for i, doc in enumerate(reference_docs):
+                st.markdown(f"**{doc.metadata['name']}**: {doc.page_content}")
+                st.markdown("---")
 
 # Greet user
 if not st.session_state.greetings:
@@ -145,7 +160,7 @@ elif mode == 'Self Corrective RAG':
     col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
     url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-corrective-rag.png"
     col2.image(url)
-        
+
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
     with st.chat_message("user"):  # display user message in chat message container
@@ -154,7 +169,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
     st.session_state.messages.append({"role": "user", "content": prompt})  # add user message to chat history
     prompt = prompt.replace('"', "").replace("'", "")
     print('prompt: ', prompt)
-    
+
     with st.chat_message("assistant"):
         if mode == '일상적인 대화':
             stream = chat.general_conversation(prompt)
@@ -167,19 +182,21 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.get_answer_using_opensearch(prompt, st, debugMode)        
+                response, reference_docs = chat.get_answer_using_opensearch(prompt, st)     
                 st.write(response)
-                print('response: ', response)
-
+                print('response: ', response)                  
+                
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Debug":
+                if debugMode != "Enable":
                     st.rerun()
 
                 chat.save_chat_history(prompt, response)
+            
+            show_references(reference_docs) 
 
         elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_agent_executor(prompt, st, debugMode)
+                response, reference_docs = chat.run_agent_executor(prompt, st)
                 st.write(response)
                 print('response: ', response)
 
@@ -189,14 +206,16 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     print('response without tag: ', response)
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Debug":
+                if debugMode != "Enable":
                     st.rerun()
 
                 chat.save_chat_history(prompt, response)
-        
+            
+            show_references(reference_docs) 
+                        
         elif mode == 'Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_corrective_rag(prompt, st, debugMode)
+                response, reference_docs = chat.run_corrective_rag(prompt, st)
                 st.write(response)
                 print('response: ', response)
 
@@ -206,14 +225,16 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     print('response without tag: ', response)
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Debug":
+                if debugMode != "Enable":
                     st.rerun()
 
                 chat.save_chat_history(prompt, response)
+            
+            show_references(reference_docs) 
 
         elif mode == 'Self RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_self_rag(prompt, st, debugMode)
+                response, reference_docs = chat.run_self_rag(prompt, st)
                 st.write(response)
                 print('response: ', response)
 
@@ -223,14 +244,16 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     print('response without tag: ', response)
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Debug":
+                if debugMode != "Enable":
                     st.rerun()
 
                 chat.save_chat_history(prompt, response)
+
+            show_references(reference_docs) 
 
         elif mode == 'Self Corrective RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response = chat.run_self_corrective_rag(prompt, st, debugMode)
+                response, reference_docs = chat.run_self_corrective_rag(prompt, st)
                 st.write(response)
                 print('response: ', response)
 
@@ -240,10 +263,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     print('response without tag: ', response)
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Debug":
+                if debugMode != "Enable":
                     st.rerun()
 
                 chat.save_chat_history(prompt, response)
+
+            show_references(reference_docs) 
 
         else:
             stream = chat.general_conversation(prompt)
@@ -254,5 +279,3 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             st.session_state.messages.append({"role": "assistant", "content": response})
             chat.save_chat_history(prompt, response)
         
-
-

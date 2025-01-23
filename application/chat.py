@@ -125,9 +125,10 @@ contextual_embedding = "Disable"
 
 parallel_processing_models = info.get_model_info(model_name)
 number_of_models = len(parallel_processing_models)
+debug_mode = "Enable"
 
-def update(modelName, multiRegion, contextualEmbedding):    
-    global model_name, multi_region, contextual_embedding     
+def update(modelName, debugMode, multiRegion, contextualEmbedding):    
+    global model_name, debug_mode, multi_region, contextual_embedding     
     
     if model_name != modelName:
         model_name = modelName
@@ -137,6 +138,10 @@ def update(modelName, multiRegion, contextualEmbedding):
         parallel_processing_models = info.get_model_info(model_name)
         number_of_models = len(parallel_processing_models)
         selected_chat = 0
+
+    if debug_mode != debugMode:
+        debug_mode = debugMode
+        print('debug_mode: ', debug_mode)
 
     if multi_region != multiRegion:
         multi_region = multiRegion
@@ -387,7 +392,7 @@ def traslation(chat, text, input_language, output_language):
 
     return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
 
-def upload_to_s3(file_bytes, file_name, contextualEmbedding):
+def upload_to_s3(file_bytes, file_name, contextual_embedding):
     """
     Upload a file to S3 and return the URL
     """
@@ -427,10 +432,10 @@ def upload_to_s3(file_bytes, file_name, contextualEmbedding):
             content_type = "image/png"
         
         user_meta = {  # user-defined metadata
-            "file_name": 'file_name',
+            "file_name": file_name,
             "content_type": content_type,
-            "contextual_embedding": contextualEmbedding,
-            "multi_region": "Disable"
+            "contextual_embedding": contextual_embedding,
+            "multi_region": multi_region
         }
         
         s3_client.put_object(
@@ -708,14 +713,14 @@ def tavily_search(query, k):
 
     return docs
 
-def extract_thinking_tag(msg, st, debugMode):
+def extract_thinking_tag(msg, st):
     if msg.find('<thinking>') != -1:
         print('Remove <thinking> tag.')
         status = msg[msg.find('<thinking>')+11:msg.find('</thinking>')]
         print('status without tag: ', status)
         msg = msg[msg.find('</thinking>')+12:]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(status)
     return msg
 
@@ -1366,16 +1371,16 @@ def get_rag_prompt(text):
 
     return rag_chain
 
-def get_answer_using_opensearch(text, st, debugMode):
+def get_answer_using_opensearch(text, st):
     chat = get_chat()
 
     # retrieve
-    if debugMode == "Debug":
+    if debug_mode == "Enable":
         st.info(f"RAG 검색을 수행합니다. 검색어: {text}")        
     relevant_docs = retrieve_documents_from_opensearch(text, top_k=4)
         
     # grade   
-    if debugMode == "Debug":
+    if debug_mode == "Enable":
         st.info(f"가져온 {len(relevant_docs)}개의 문서를 평가하고 있습니다.")     
     filtered_docs = grade_documents(text, relevant_docs) # grading    
     filtered_docs = check_duplication(filtered_docs) # check duplication
@@ -1384,11 +1389,11 @@ def get_answer_using_opensearch(text, st, debugMode):
     if len(filtered_docs):
         reference_docs += filtered_docs 
 
-    if debugMode == "Debug":
+    if debug_mode == "Enable":
         st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
 
     # generate
-    if debugMode == "Debug":
+    if debug_mode == "Enable":
         st.info(f"결과를 생성중입니다.")
     relevant_context = ""
     for document in relevant_docs:
@@ -1420,7 +1425,7 @@ def get_answer_using_opensearch(text, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
 
-    return msg+reference
+    return msg+reference, reference_docs
 
 ####################### LangGraph #######################
 # Agentic RAG
@@ -1632,7 +1637,7 @@ def search_by_tavily(keyword: str) -> str:
 
 tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch]        
 
-def run_agent_executor(query, st, debugMode):
+def run_agent_executor(query, st):
     chatModel = get_chat()     
     model = chatModel.bind_tools(tools)
 
@@ -1722,13 +1727,13 @@ def run_agent_executor(query, st, debugMode):
                                     status = status[status.find('<thinking>')+11:status.find('</thinking>')]
                                     print('status without tag: ', status)
 
-                                if debugMode=="Debug":
+                                if debug_mode=="Enable":
                                     st.info(status)
                                 
                             elif re['type'] == 'tool_use':                
                                 print(f"--> {re['type']}: {re['name']}, {re['input']}")
 
-                                if debugMode=="Debug":
+                                if debug_mode=="Enable":
                                     st.info(f"{re['type']}: {re['name']}, {re['input']}")
                             else:
                                 print(re)
@@ -1789,9 +1794,9 @@ def run_agent_executor(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
 
-    msg = extract_thinking_tag(msg, st, debugMode)
+    msg = extract_thinking_tag(msg, st)
     
-    return msg+reference
+    return msg+reference, reference_docs
 
 
 ####################### LangGraph #######################
@@ -1896,7 +1901,7 @@ def get_hallucination_grader():
     hallucination_grader = hallucination_prompt | structured_llm_grade_hallucination
     return hallucination_grader
 
-def run_corrective_rag(query, st, debugMode):
+def run_corrective_rag(query, st):
     class State(TypedDict):
         question : str
         generation : str
@@ -1907,7 +1912,7 @@ def run_corrective_rag(query, st, debugMode):
         print("###### retrieve ######")
         question = state["question"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"RAG 검색을 수행합니다. 검색어: {question}")        
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
@@ -1918,7 +1923,7 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
         
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.")    
         
         # Score each doc
@@ -1962,7 +1967,7 @@ def run_corrective_rag(query, st, debugMode):
 
         filtered_docs = check_duplication(filtered_docs) # check duplication
 
-        if debugMode == "Debug":
+        if debug_mode == "Enable":
             st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
         
         global reference_docs
@@ -1989,7 +1994,7 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"답변을 생성하고 있습니다.")       
         
         # RAG generation
@@ -2023,7 +2028,7 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"질문을 새로 생성하고 있습니다.")       
         
         # Prompt
@@ -2039,20 +2044,18 @@ def run_corrective_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
         docs = web_search(question)
         # print('docs: ', docs)
 
-        if debugMode == "Debug":
+        if debug_mode == "Enable":
             st.info(f"{len(docs)}개의 문서가 검색되었습니다.")
 
         for doc in docs:
             documents.append(doc)
         # print('documents: ', documents)
-
-       
             
         return {"question": question, "documents": documents}
 
@@ -2108,7 +2111,7 @@ def run_corrective_rag(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
         
-    return value["generation"] + reference
+    return value["generation"] + reference, reference_docs
 
 ####################### LangGraph #######################
 # Self RAG
@@ -2143,7 +2146,7 @@ class GraphConfig(TypedDict):
     max_retries: int    
     max_count: int
 
-def run_self_rag(query, st, debugMode):
+def run_self_rag(query, st):
     class State(TypedDict):
         question : str
         generation : str
@@ -2156,7 +2159,7 @@ def run_self_rag(query, st, debugMode):
         print("###### retrieve ######")
         question = state["question"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"RAG 검색을 수행합니다. 검색어: {question}")        
         docs = retrieve_documents_from_opensearch(question, top_k=4)
         
@@ -2168,7 +2171,7 @@ def run_self_rag(query, st, debugMode):
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"답변을 생성합니다.")
         
         # RAG generation
@@ -2199,7 +2202,7 @@ def run_self_rag(query, st, debugMode):
         documents = state["documents"]
         count = state["count"] if state.get("count") is not None else -1
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.")    
         
         print("start grading...")
@@ -2236,7 +2239,7 @@ def run_self_rag(query, st, debugMode):
 
         filtered_docs = check_duplication(filtered_docs) # check duplication
 
-        if debugMode == "Debug":
+        if debug_mode == "Enable":
             st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
         
         global reference_docs
@@ -2267,7 +2270,7 @@ def run_self_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"질문을 새로 생성합니다.")       
         
         # Prompt
@@ -2290,7 +2293,7 @@ def run_self_rag(query, st, debugMode):
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
         # Check Hallucination
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"환각(hallucination)인지 검토합니다.")
 
         hallucination_grader = get_hallucination_grader()        
@@ -2313,13 +2316,13 @@ def run_self_rag(query, st, debugMode):
 
         answer_grader = get_answer_grader()    
         if hallucination_grade == "yes":
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"환각이 아닙니다.")
 
             print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
 
             # Check appropriate answer
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"적절한 답변인지 검토합니다.")
 
             print("---GRADE GENERATION vs QUESTION---")
@@ -2329,12 +2332,12 @@ def run_self_rag(query, st, debugMode):
 
             if answer_grade == "yes":
                 print("---DECISION: GENERATION ADDRESSES QUESTION---")
-                if debugMode=="Debug":
+                if debug_mode=="Enable":
                     st.info(f"적절한 답변입니다.")
                 return "useful" 
             else:
                 print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
-                if debugMode=="Debug":
+                if debug_mode=="Enable":
                     st.info(f"적절하지 않은 답변입니다.")
                 
                 
@@ -2342,7 +2345,7 @@ def run_self_rag(query, st, debugMode):
                 return "not useful" if retries < max_retries else "not available"
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"환각(halucination)입니다.")            
             reference_docs = []
             return "not supported" if retries < max_retries else "not available"
@@ -2407,12 +2410,12 @@ def run_self_rag(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
         
-    return value["generation"] + reference
+    return value["generation"] + reference, reference_docs
 
 ####################### LangGraph #######################
 # Self Corrective RAG
 #########################################################
-def run_self_corrective_rag(query, st, debugMode):
+def run_self_corrective_rag(query, st):
     class State(TypedDict):
         messages: Annotated[list[BaseMessage], add_messages]
         question: str
@@ -2425,7 +2428,7 @@ def run_self_corrective_rag(query, st, debugMode):
         print("###### retrieve ######")
         question = state["question"]
         
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"RAG 검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
@@ -2438,7 +2441,7 @@ def run_self_corrective_rag(query, st, debugMode):
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"답변을 생성합니다.")
                 
         # RAG generation
@@ -2470,7 +2473,7 @@ def run_self_corrective_rag(query, st, debugMode):
         print("###### rewrite ######")
         question = state["question"]
         
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"질문을 새로 생성하고 있습니다.")      
 
         # Prompt
@@ -2497,7 +2500,7 @@ def run_self_corrective_rag(query, st, debugMode):
             return "finalize_response"        
                 
         # Check hallucination
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"환각(hallucination)인지 검토합니다.")
 
         print("---Hallucination?---")    
@@ -2519,19 +2522,19 @@ def run_self_corrective_rag(query, st, debugMode):
 
         if hallucination_grade == "no":
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"환각(halucination)입니다.")                        
             reference_docs = []
             return "generate" if retries < max_retries else "websearch"
 
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"환각이 아닙니다.")
         
         print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
         print("---GRADE GENERATION vs QUESTION---")
 
         # Check appropriate answer
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"적절한 답변인지 검토합니다.")
         
         answer_grader = get_answer_grader()    
@@ -2550,12 +2553,12 @@ def run_self_corrective_rag(query, st, debugMode):
             
         if answer_grade == "yes":
             print("---DECISION: GENERATION ADDRESSES QUESTION---")
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"적절한 답변입니다.")
             return "finalize_response"
         else:
             print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION (Not Answer)---")
-            if debugMode=="Debug":
+            if debug_mode=="Enable":
                 st.info(f"적절하지 않은 답변입니다.")            
             reference_docs = []
             return "rewrite" if retries < max_retries else "websearch"
@@ -2565,11 +2568,11 @@ def run_self_corrective_rag(query, st, debugMode):
         question = state["question"]
         documents = state["documents"]
         
-        if debugMode=="Debug":
+        if debug_mode=="Enable":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
         docs = web_search(question)
-        if debugMode == "Debug":
+        if debug_mode == "Enable":
             st.info(f"{len(docs)}개의 문서가 검색되었습니다.")
 
         for doc in docs:
@@ -2639,5 +2642,5 @@ def run_self_corrective_rag(query, st, debugMode):
     if reference_docs:
         reference = get_references(reference_docs)
         
-    return value["messages"][-1].content + reference
+    return value["messages"][-1].content + reference, reference_docs
 
