@@ -94,11 +94,8 @@ useEnhancedSearch = False
 selected_chat = 0
 
 userId = "demo"
-modelName = "Nova Pro"
 modelType = "nova"
 map_chain = dict() 
-parallel_processing_models = info.get_model_info(modelName)
-number_of_models = len(parallel_processing_models)
 
 # RAG
 index_name = projectName
@@ -120,20 +117,34 @@ if s3_bucket is None:
 
 enableParentDocumentRetrival = 'true'
 enableHybridSearch = 'true'
-multi_region = 'enable'
 selected_embedding = 0
 
-def update(langMode):    
-    global modelName        
+model_name = "Nova Pro"
+multi_region = 'Disable'
+contextual_embedding = "Disable"
+
+parallel_processing_models = info.get_model_info(model_name)
+number_of_models = len(parallel_processing_models)
+
+def update(modelName, multiRegion, contextualEmbedding):    
+    global model_name, multi_region, contextual_embedding     
     
-    if langMode != modelName:
-        modelName = langMode
-        print('modelName: ', modelName)
+    if model_name != modelName:
+        model_name = modelName
+        print('model_name: ', model_name)
 
         global parallel_processing_models, number_of_models, selected_chat    
-        parallel_processing_models = info.get_model_info(modelName)
+        parallel_processing_models = info.get_model_info(model_name)
         number_of_models = len(parallel_processing_models)
         selected_chat = 0
+
+    if multi_region != multiRegion:
+        multi_region = multiRegion
+        print('multi_region: ', multi_region)
+
+    if contextual_embedding != contextualEmbedding:
+        contextual_embedding = contextualEmbedding
+        print('contextual_embedding: ', contextual_embedding)
 
 def initiate():
     global userId
@@ -376,7 +387,7 @@ def traslation(chat, text, input_language, output_language):
 
     return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
 
-def upload_to_s3(file_bytes, file_name):
+def upload_to_s3(file_bytes, file_name, contextualEmbedding):
     """
     Upload a file to S3 and return the URL
     """
@@ -415,8 +426,19 @@ def upload_to_s3(file_bytes, file_name):
         elif file_name.lower().endswith((".png")):
             content_type = "image/png"
         
+        user_meta = {  # user-defined metadata
+            "file_name": 'file_name',
+            "content_type": content_type,
+            "contextual_embedding": contextualEmbedding,
+            "multi_region": "Disable"
+        }
+        
         s3_client.put_object(
-            Bucket=bucketName, Key=s3_key, Body=file_bytes, ContentType=content_type
+            Bucket=bucketName, 
+            Key=s3_key, 
+            ContentType=content_type,
+            Metadata = user_meta,
+            Body=file_bytes            
         )
 
         url = f"https://{bucketName}.s3.amazonaws.com/{s3_key}"
@@ -1775,7 +1797,7 @@ def run_agent_executor(query, st, debugMode):
 ####################### LangGraph #######################
 # Corrective RAG
 #########################################################
-langMode = False
+modelName = False
 
 def get_rewrite():
     class RewriteQuestion(BaseModel):
@@ -1786,9 +1808,9 @@ def get_rewrite():
     chat = get_chat()
     structured_llm_rewriter = chat.with_structured_output(RewriteQuestion)
     
-    print('langMode: ', langMode)
+    print('modelName: ', modelName)
     
-    if langMode:
+    if modelName:
         system = """당신은 질문 re-writer입니다. 사용자의 의도와 의미을 잘 표현할 수 있도록 질문을 한국어로 re-write하세요."""
     else:
         system = (
@@ -2067,8 +2089,8 @@ def run_corrective_rag(query, st, debugMode):
     contentList = []
     reference_docs = []
     
-    global langMode
-    langMode = isKorean(query)
+    global modelName
+    modelName = isKorean(query)
             
     inputs = {"question": query}
     config = {
@@ -2362,8 +2384,8 @@ def run_self_rag(query, st, debugMode):
 
     app = build()    
     
-    global langMode
-    langMode = isKorean(query)
+    global modelName
+    modelName = isKorean(query)
 
     global contentList, reference_docs
     contentList = []
@@ -2593,8 +2615,8 @@ def run_self_corrective_rag(query, st, debugMode):
 
     app = buildSelCorrectivefRAG()
 
-    global langMode
-    langMode = isKorean(query)
+    global modelName
+    modelName = isKorean(query)
 
     global contentList, reference_docs
     contentList = []

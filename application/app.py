@@ -49,16 +49,28 @@ with st.sidebar:
     )
 
     # debug Mode
-    langMode = st.selectbox(
+    modelName = st.selectbox(
         '🖊️ 사용 모델을 선택하세요',
         ('Nova Pro', 'Nova Lite', 'Claude Sonnet 3.5', 'Claude Sonnet 3.0', 'Claude Haiku 3.5')
     )
-    chat.update(langMode)
+
+    # debug Mode
+    multiRegion = st.selectbox(
+        '🖊️ Multi Region',
+        ('Disable', 'Enable')
+    )
+
+    # contextual embedding
+    contextualEmbedding = st.selectbox(
+        '🖊️ Contextual Embedding',
+        ('Disable', 'Enable')
+    )
+    chat.update(modelName, multiRegion, contextualEmbedding)
 
     st.subheader("📋 문서 업로드")
     uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"])
 
-    st.success(f"Connected to {langMode}", icon="💚")
+    st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
     # print('clear_button: ', clear_button)
 
@@ -73,7 +85,7 @@ if uploaded_file and clear_button==False:
     # st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
 
     file_name = uploaded_file.name
-    file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name)
+    file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
     print('file_url: ', file_url) 
 
     msg = chat.get_summary_of_uploaded_file(file_name)
@@ -183,8 +195,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 chat.save_chat_history(prompt, response)
         
         elif mode == 'Corrective RAG':
-            
-
             with st.status("thinking...", expanded=True, state="running") as status:
                 response = chat.run_corrective_rag(prompt, st, debugMode)
                 st.write(response)

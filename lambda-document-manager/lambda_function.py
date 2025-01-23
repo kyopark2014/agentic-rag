@@ -45,6 +45,7 @@ selected_chat = 0
 selected_multimodal = 0
 selected_embedding = 0
 maxOutputTokens = 4096
+enableContexualRetrieval = 'Disable'
 
 # LLM_for_multimodal= json.loads(os.environ.get('LLM_for_multimodal'))
 LLM_for_multimodal = [   # Nova Pro
@@ -474,7 +475,55 @@ def create_nori_index():
 
 if enableHybridSearch == 'true':
     create_nori_index()
+
+def get_contexual_docs(whole_doc, splitted_docs):
+    contextual_template = (
+        "<document>"
+        "{WHOLE_DOCUMENT}"
+        "</document>"
+        "Here is the chunk we want to situate within the whole document."
+        "<chunk>"
+        "{CHUNK_CONTENT}"
+        "</chunk>"
+        "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk."
+        "Answer only with the succinct context and nothing else."
+        "Put it in <result> tags."
+    )          
     
+    contextual_prompt = ChatPromptTemplate([
+        ('human', contextual_template)
+    ])
+
+    docs = []
+    contexualized_chunks = []
+    for i, doc in enumerate(splitted_docs):
+        # chat = get_contexual_retrieval_chat()
+        chat = get_chat()
+        
+        contexual_chain = contextual_prompt | chat
+            
+        response = contexual_chain.invoke(
+            {
+                "WHOLE_DOCUMENT": whole_doc.page_content,
+                "CHUNK_CONTENT": doc.page_content
+            }
+        )
+        # print('--> contexual chunk: ', response)
+        output = response.content
+        contextualized_chunk = output[output.find('<result>')+8:len(output)-9]
+        contexualized_chunks.append(contextualized_chunk)
+        
+        print(f"--> {i}: original_chunk: {doc.page_content}")
+        print(f"--> {i}: contexualized_chunk: {contextualized_chunk}")
+        
+        docs.append(
+            Document(
+                page_content=contextualized_chunk+"\n\n"+doc.page_content,
+                metadata=doc.metadata
+            )
+        )
+    return docs, contexualized_chunks
+
 def add_to_opensearch(docs, key):    
     if len(docs) == 0:
         return []    
@@ -503,6 +552,13 @@ def add_to_opensearch(docs, key):
 
         parent_docs = parent_splitter.split_documents(docs)
         print('len(parent_docs): ', len(parent_docs))
+
+        print('parent chunk[0]: ', parent_docs[0].page_content)
+
+        if enableContexualRetrieval == 'Enable':
+            parent_docs, contexualized_chunks = get_contexual_docs(docs[-1], parent_docs)
+            print('parent contextual chunk[0]: ', parent_docs[0].page_content)
+
         if len(parent_docs):
             # print('parent_docs[0]: ', parent_docs[0])
             # parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
@@ -515,22 +571,32 @@ def add_to_opensearch(docs, key):
             try:        
                 parent_doc_ids = vectorstore.add_documents(parent_docs, bulk_size = 10000)
                 print('parent_doc_ids: ', parent_doc_ids)
-                
-                child_docs = []
-                       
+                ids = parent_doc_ids
+
                 for i, doc in enumerate(parent_docs):
                     _id = parent_doc_ids[i]
                     sub_docs = child_splitter.split_documents([doc])
                     for _doc in sub_docs:
                         _doc.metadata["parent_doc_id"] = _id
                         _doc.metadata["doc_level"] = "child"
-                    child_docs.extend(sub_docs)
-                # print('child_docs: ', child_docs)
+                    print('sub_docs[0]: ', sub_docs[0].page_content)
+
+                    if enableContexualRetrieval == 'Enable':
+                        docs = []
+                        for doc in sub_docs:
+                            docs.append(
+                                Document(
+                                    page_content=contexualized_chunks[i]+"\n\n"+doc.page_content,
+                                    metadata=doc.metadata
+                                )
+                            )
+                        sub_docs = docs                    
                 
-                child_doc_ids = vectorstore.add_documents(child_docs, bulk_size = 10000)
-                print('child_doc_ids: ', child_doc_ids)
-                    
-                ids = parent_doc_ids+child_doc_ids
+                    child_doc_ids = vectorstore.add_documents(sub_docs, bulk_size = 10000)
+                    print('child_doc_ids: ', child_doc_ids)
+                    print('len(child_doc_ids): ', len(child_doc_ids))
+                        
+                    ids += child_doc_ids
             except Exception:
                 err_msg = traceback.format_exc()
                 print('error message: ', err_msg)                
@@ -545,8 +611,14 @@ def add_to_opensearch(docs, key):
         
         documents = text_splitter.split_documents(docs)
         print('len(documents): ', len(documents))
+
         if len(documents):
-            print('documents[0]: ', documents[0])        
+            if enableContexualRetrieval == 'Enable':                        
+                print('chunk[0]: ', documents[0].page_content)             
+                documents, contexualized_chunks = get_contexual_docs(docs[-1], documents)
+                print('contextual chunks[0]: ', contexualized_chunks[0])  
+            else:
+                print('documents[0]: ', documents[0])
             
         try:        
             ids = vectorstore.add_documents(documents, bulk_size = 10000)
@@ -1387,6 +1459,19 @@ def lambda_handler(event, context):
                 s3obj = s3_client.get_object(Bucket=bucket, Key=key)
                 print(f"Got object: {s3obj}")
                 size = int(s3obj['ContentLength'])    
+
+                if 'Metadata' in s3obj:
+                    if 'file_name' in s3obj['Metadata']:
+                        file_name = s3obj['Metadata']['file_name']
+                        print('file_name: ', file_name)
+                    if 'content_type' in s3obj['Metadata']:
+                        content_type = s3obj['Metadata']['content_type']
+                        print('content_type: ', content_type)
+                    if 'contextual_embedding' in s3obj['Metadata']:
+                        contextual_embedding = s3obj['Metadata']['contextual_embedding']
+                        print('contextual_embedding: ', contextual_embedding)
+                        global enableContexualRetrieval
+                        enableContexualRetrieval = contextual_embedding
                 
                 #attributes = ['ETag', 'Checksum', 'ObjectParts', 'StorageClass', 'ObjectSize']
                 #result = s3_client.get_object_attributes(Bucket=bucket, Key=key, ObjectAttributes=attributes)  
