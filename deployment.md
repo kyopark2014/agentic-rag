@@ -91,7 +91,7 @@ cdk deploy --require-approval never --all
 
 [Secret manager](https://us-west-2.console.aws.amazon.com/secretsmanager/listsecrets?region=us-west-2)에 접속하여, [openweathermap-bedrock-agent](https://us-west-2.console.aws.amazon.com/secretsmanager/secret?name=openweathermap-bedrock-agent&region=us-west-2), [tavilyapikey-bedrock-agent](https://us-west-2.console.aws.amazon.com/secretsmanager/secret?name=tavilyapikey-bedrock-agent&region=us-west-2), [langsmithapikey-bedrock-agent](https://us-west-2.console.aws.amazon.com/secretsmanager/secret?name=langsmithapikey-bedrock-agent&region=us-west-2)에 접속하여, [Retrieve secret value]를 선택 후, api key를 입력합니다.
 
-6) OpenSearch가 사용하는 AWS Credential을 입력하기 위해, [Console-EC2](https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#Instances:instanceState=running)에서 "app-for-langgraph-nova"을 선택한 후에 [Connect]를 선택합니다. 여러가지 옵션 중에서 Session Manager를 선택한 후에 [connect]를 접속한 후에 console로 접속합니다. 아래 명령어를 이용하여 ec2-user에 AWS Credential을 입력합니다.
+6) OpenSearch가 사용하는 AWS Credential을 입력하기 위해, [Console-EC2](https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#Instances:instanceState=running)에서 "app-for-agentic-rag"을 선택한 후에 [Connect]를 선택합니다. 여러가지 옵션 중에서 Session Manager를 선택한 후에 [connect]를 접속한 후에 console로 접속합니다. 아래 명령어를 이용하여 ec2-user에 AWS Credential을 입력합니다.
 
 ```text
 sudo runuser -l ec2-user -c 'aws configure'
@@ -140,13 +140,13 @@ streamlit run application/app.py
 
 ```text
 sudo systemctl stop streamlit
-sudo runuser -l ec2-user -c "/home/ec2-user/.local/bin/streamlit run /home/ec2-user/langgraph-nova/application/app.py"
+sudo runuser -l ec2-user -c "/home/ec2-user/.local/bin/streamlit run /home/ec2-user/agentic-rag/application/app.py"
 ```
 
 이때, ec2-user의 github 코드를 업데이트하는 명령어는 아래와 같습니다.
 
 ```text
-sudo runuser -l ec2-user -c 'cd /home/ec2-user/langgraph-nova && git pull'
+sudo runuser -l ec2-user -c 'cd /home/ec2-user/agentic-rag && git pull'
 ```
 
 ### Streamlit 관련 중요한 명령어들
@@ -185,7 +185,7 @@ After=network-online.target
 User=ec2-user
 Group=ec2-user
 Restart=always
-ExecStart=/home/ec2-user/.local/bin/streamlit run /home/ec2-user/langgraph-nova/application/app.py
+ExecStart=/home/ec2-user/.local/bin/streamlit run /home/ec2-user/agentic-rag/application/app.py
 
 [Install]
 WantedBy=multi-user.target
