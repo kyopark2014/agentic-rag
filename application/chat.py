@@ -35,7 +35,7 @@ from multiprocessing import Process, Pipe
 from urllib import parse
 from pydantic.v1 import BaseModel, Field
 from langchain_core.output_parsers import StrOutputParser
-from langchain.utilities.tavily_search import TavilySearchAPIWrapper
+from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -86,7 +86,6 @@ knowledge_base_name = projectName
 numberOfDocs = 4
 MSG_LENGTH = 100    
 grade_state = "LLM" # LLM, PRIORITY_SEARCH, OTHERS
-parallel_processing = 'enable'
 
 doc_prefix = s3_prefix+'/'
 useEnhancedSearch = False
@@ -123,22 +122,24 @@ model_name = "Nova Pro"
 multi_region = 'Disable'
 contextual_embedding = "Disable"
 
-parallel_processing_models = info.get_model_info(model_name)
-number_of_models = len(parallel_processing_models)
+models = info.get_model_info(model_name)
+number_of_models = len(models) if multi_region=="Enable" else 1
+
 debug_mode = "Enable"
 
 def update(modelName, debugMode, multiRegion, contextualEmbedding):    
     global model_name, debug_mode, multi_region, contextual_embedding     
+    global models, number_of_models, selected_chat, selected_embedding 
     
     if model_name != modelName:
         model_name = modelName
         print('model_name: ', model_name)
-
-        global parallel_processing_models, number_of_models, selected_chat    
-        parallel_processing_models = info.get_model_info(model_name)
-        number_of_models = len(parallel_processing_models)
+        
         selected_chat = 0
-
+        selected_embedding = 0
+        models = info.get_model_info(model_name)
+        number_of_models = len(models)
+        
     if debug_mode != debugMode:
         debug_mode = debugMode
         print('debug_mode: ', debug_mode)
@@ -146,6 +147,10 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding):
     if multi_region != multiRegion:
         multi_region = multiRegion
         print('multi_region: ', multi_region)
+
+        selected_chat = 0
+        selected_embedding = 0
+        number_of_models = len(models) if multi_region=="Enable" else 1
 
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding
@@ -182,7 +187,7 @@ def save_chat_history(text, msg):
 def get_chat():
     global selected_chat, modelType
 
-    profile = parallel_processing_models[selected_chat]
+    profile = models[selected_chat]
     # print('profile: ', profile)
         
     bedrock_region =  profile['bedrock_region']
@@ -222,10 +227,13 @@ def get_chat():
         region_name=bedrock_region
     )    
     
-    selected_chat = selected_chat + 1
-    if selected_chat == number_of_models:
+    if multi_region=='Enable':
+        selected_chat = selected_chat + 1
+        if selected_chat == number_of_models:
+            selected_chat = 0
+    else:
         selected_chat = 0
-    
+
     return chat
 
 def get_parallel_processing_chat(models, selected):
@@ -483,7 +491,7 @@ def grade_documents_using_parallel_processing(question, documents):
         parent_conn, child_conn = Pipe()
         parent_connections.append(parent_conn)
             
-        process = Process(target=grade_document_based_on_relevance, args=(child_conn, question, doc, parallel_processing_models, selected_chat))
+        process = Process(target=grade_document_based_on_relevance, args=(child_conn, question, doc, models, selected_chat))
         processes.append(process)
 
         selected_chat = selected_chat + 1
@@ -532,7 +540,7 @@ def grade_documents(question, documents):
     
     if grade_state == "LLM":
         filtered_docs = []
-        if parallel_processing == 'enable':  # parallel processing        
+        if multi_region == 'Enable':  # parallel processing        
             filtered_docs = grade_documents_using_parallel_processing(question, documents)
 
         else:
@@ -598,7 +606,7 @@ def retrieve_documents_from_tavily(query, top_k):
         search_depth="advanced", 
         # include_domains=["google.com", "naver.com"]
     )
-                    
+
     try: 
         output = search.invoke(query)
         print('tavily output: ', output)
@@ -1111,10 +1119,13 @@ def get_embedding():
         model_id = model_id
     )  
     
-    selected_embedding = selected_embedding + 1
-    if selected_embedding == len(LLM_embedding):
+    if multi_region=='Enable':
+        selected_embedding = selected_embedding + 1
+        if selected_embedding == len(LLM_embedding):
+            selected_embedding = 0
+    else:
         selected_embedding = 0
-    
+
     return bedrock_embedding
 
 def lexical_search(query, top_k):
@@ -1372,8 +1383,6 @@ def get_rag_prompt(text):
     return rag_chain
 
 def get_answer_using_opensearch(text, st):
-    chat = get_chat()
-
     # retrieve
     if debug_mode == "Enable":
         st.info(f"RAG 검색을 수행합니다. 검색어: {text}")        
@@ -1934,7 +1943,7 @@ def run_corrective_rag(query, st):
         web_search = "No"
         
         if grade_state == "LLM":
-            if multi_region == 'enable':  # parallel processing            
+            if multi_region == 'Enable':  # parallel processing            
                 filtered_docs = grade_documents_using_parallel_processing(question, documents)
                 
                 if len(documents) != len(filtered_docs):
@@ -2209,7 +2218,7 @@ def run_self_rag(query, st):
         print("grade_state: ", grade_state)
         
         if grade_state == "LLM":
-            if multi_region == 'enable':  # parallel processing            
+            if multi_region == 'Enable':  # parallel processing            
                 filtered_docs = grade_documents_using_parallel_processing(question, documents)
 
             else:    

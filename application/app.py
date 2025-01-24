@@ -53,17 +53,17 @@ with st.sidebar:
     # debug Mode
     select_debugMode = st.checkbox('Debug Mode', value=True)
     debugMode = 'Enable' if select_debugMode else 'Disable'
-    print('debugMode: ', debugMode)
+    #print('debugMode: ', debugMode)
 
     # debug Mode
     select_multiRegion = st.checkbox('Multi Region', value=True)
     multiRegion = 'Enable' if select_multiRegion else 'Disable'
-    print('multiRegion: ', multiRegion)
+    #print('multiRegion: ', multiRegion)
 
     # contextual embedding
     selected_contextualEmbedding = st.checkbox('Contextual Embedding', value=False)
     contextualEmbedding = 'Enable' if selected_contextualEmbedding else 'Disable'
-    print('contextualEmbedding: ', contextualEmbedding)
+    #print('contextualEmbedding: ', contextualEmbedding)
 
     chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
 
