@@ -950,6 +950,8 @@ def extract_text(img_base64):
     
     return extracted_text
 
+fileId = uuid.uuid4().hex
+print('fileId: ', fileId)
 def get_summary_of_uploaded_file(file_name):
     file_type = file_name[file_name.rfind('.')+1:len(file_name)]            
     print('file_type: ', file_type)
@@ -1041,6 +1043,10 @@ def get_summary_of_uploaded_file(file_name):
         
         if len(extracted_text)>10:
             msg += f"\n\n[추출된 Text]\n{extracted_text}\n"
+
+    global fileId
+    fileId = uuid.uuid4().hex
+    print('fileId: ', fileId)
 
     return msg
 

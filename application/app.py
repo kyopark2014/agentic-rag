@@ -68,7 +68,8 @@ with st.sidebar:
     chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
 
     st.subheader("📋 문서 업로드")
-    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=mode)
+    print('fileId: ', chat.fileId)
+    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
 
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
@@ -81,11 +82,8 @@ if clear_button==True:
 
 # Preview the uploaded image in the sidebar
 file_name = ""
-file_list = []
-
-if uploaded_file and clear_button==False:
-    print('file_list: ', file_list)
-    if uploaded_file.name not in file_list:
+if uploaded_file is not None and clear_button==False:
+    if uploaded_file.name:        
         file_name = uploaded_file.name
         file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
         print('file_url: ', file_url) 
@@ -96,17 +94,15 @@ if uploaded_file and clear_button==False:
         for percent_complete in range(100):
             time.sleep(0.2)
             my_bar.progress(percent_complete + 1, text=progress_text)
-        # with st.spinner(f"선택한 {file_name}을 업로드하고 파일 내용을 요약하고 있습니다..."):
-        #     time.sleep(10)
 
         msg = chat.get_summary_of_uploaded_file(file_name)
-
         st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
         print('msg: ', msg)
 
-        file_list.append(file_name)
-        print('file_list: ', file_list)
-        
+        uploaded_file.name = None
+        uploaded_file = None
+        st.rerun()
+
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -180,8 +176,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             response = st.write_stream(stream)
             print('response: ', response)
             st.session_state.messages.append({"role": "assistant", "content": response})
-            st.rerun()
-
             chat.save_chat_history(prompt, response)
 
         elif mode == 'RAG':
