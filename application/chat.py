@@ -1327,6 +1327,8 @@ def retrieve_documents_from_opensearch(query, top_k):
     return relevant_docs
 
 def get_rag_prompt(text):
+    print("###### get_rag_prompt ######")
+    print('modelType: ', modelType)
     if modelType == "nova":
         if isKorean(text)==True:
             system = (
