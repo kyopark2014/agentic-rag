@@ -84,6 +84,7 @@ file_name = ""
 file_list = []
 
 if uploaded_file and clear_button==False:
+    print('file_list: ', file_list)
     if uploaded_file.name not in file_list:
         file_name = uploaded_file.name
         file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
@@ -104,6 +105,7 @@ if uploaded_file and clear_button==False:
         print('msg: ', msg)
 
         file_list.append(file_name)
+        print('file_list: ', file_list)
         
 # Initialize chat history
 if "messages" not in st.session_state:
