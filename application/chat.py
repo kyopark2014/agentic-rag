@@ -1327,8 +1327,8 @@ def retrieve_documents_from_opensearch(query, top_k):
     return relevant_docs
 
 def get_rag_prompt(text):
-    #print("###### get_rag_prompt ######")
-    #print('modelType: ', modelType)
+    print("###### get_rag_prompt ######")
+    print('modelType: ', modelType)
     chat = get_chat()
 
     if modelType == "nova":
