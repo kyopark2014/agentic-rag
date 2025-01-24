@@ -31,7 +31,6 @@ s3_client = boto3.client('s3')
 s3_bucket = os.environ.get('s3_bucket') # bucket name
 s3_prefix = os.environ.get('s3_prefix')
 meta_prefix = "metadata/"
-enableParallelSummary = os.environ.get('enableParallelSummary')
 enableParentDocumentRetrival = os.environ.get('enableParentDocumentRetrival')
 
 opensearch_account = os.environ.get('opensearch_account')
@@ -39,7 +38,6 @@ opensearch_passwd = os.environ.get('opensearch_passwd')
 opensearch_url = os.environ.get('opensearch_url')
 sqsUrl = os.environ.get('sqsUrl')
 doc_prefix = s3_prefix+'/'
-LLM_for_chat = json.loads(os.environ.get('LLM_for_chat'))
 LLM_embedding = json.loads(os.environ.get('LLM_embedding'))
 selected_chat = 0
 selected_multimodal = 0
@@ -47,25 +45,128 @@ selected_embedding = 0
 maxOutputTokens = 4096
 enableContexualRetrieval = 'Disable'
 
-# LLM_for_multimodal= json.loads(os.environ.get('LLM_for_multimodal'))
-LLM_for_multimodal = [   # Nova Pro
-    {   
-        "bedrock_region": "us-west-2", # Oregon
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-pro-v1:0"
-    }
-]
-multi_region = 'enable'
+model_name = "Nova Pro"
+multi_region = 'Enable'
+
+def get_multimodal_info():
+    nova_pro_models = [   # Nova Pro
+        {   
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        }
+    ]
+
+    nova_lite_models = [   # Nova Lite
+        {   
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "nova",
+            "model_id": "us.amazon.nova-pro-v1:0"
+        }
+    ]
+
+    claude_sonnet_3_5_v1_models = [   # Sonnet 3.5 V1
+        {
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        }
+    ]
+
+    claude_sonnet_3_5_v2_models = [   # Sonnet 3.5 V1
+        {
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        }
+    ]
+
+    claude_sonnet_3_0_models = [   # Sonnet 3.0
+        {
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
+        }
+    ]
+
+    claude_haiku_3_5_models = [   # Haiku 3.5 
+        {
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
+        }
+    ]
+
+    if model_name == 'Nova Pro':
+        return nova_pro_models
+    elif model_name == 'Nova Lite':
+        return nova_lite_models
+    elif model_name == 'Claude Sonnet 3.5':
+        return claude_sonnet_3_5_v1_models  # claude_sonnet_3_5_v2_models
+    elif model_name == 'Claude Sonnet 3.0':
+        return claude_sonnet_3_0_models    
+    elif model_name == 'Claude Haiku 3.5':
+        return claude_haiku_3_5_models
 
 roleArn = os.environ.get('roleArn') 
 path = os.environ.get('path')
@@ -130,6 +231,9 @@ def delete_document_if_exist(metadata_key):
 
 def get_chat():
     global selected_chat
+
+    LLM_for_chat = get_multimodal_info()
+
     profile = LLM_for_chat[selected_chat]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
@@ -160,14 +264,19 @@ def get_chat():
         model_kwargs=parameters,
     )    
     
-    selected_chat = selected_chat + 1
-    if selected_chat == len(LLM_for_chat):
+    if multi_region == "Enable":
+        selected_chat = selected_chat + 1
+        if selected_chat == len(LLM_for_chat):
+            selected_chat = 0
+    else:
         selected_chat = 0
-    
+        
     return chat
 
 def get_multimodal():
     global selected_multimodal
+
+    LLM_for_multimodal = get_multimodal_info()
     
     profile = LLM_for_multimodal[selected_multimodal]
     bedrock_region =  profile['bedrock_region']
@@ -199,8 +308,11 @@ def get_multimodal():
         model_kwargs=parameters,
     )    
     
-    selected_multimodal = selected_multimodal + 1
-    if selected_multimodal == len(LLM_for_multimodal):
+    if multi_region == "Enable":
+        selected_multimodal = selected_multimodal + 1
+        if selected_multimodal == len(LLM_for_multimodal):
+            selected_multimodal = 0
+    else:
         selected_multimodal = 0
     
     return multimodal
@@ -229,8 +341,11 @@ def get_embedding():
         model_id = model_id
     )  
     
-    selected_embedding = selected_embedding + 1
-    if selected_embedding == len(LLM_embedding):
+    if multi_region == "Enable":
+        selected_embedding = selected_embedding + 1
+        if selected_embedding == len(LLM_embedding):
+            selected_embedding = 0
+    else:
         selected_embedding = 0
     
     return bedrock_embedding
@@ -286,7 +401,7 @@ def store_document_for_opensearch(file_type, key):
 def store_code_for_opensearch(file_type, key):
     codes = load_code(file_type, key)  # number of functions in the code
             
-    if enableParallelSummary=='true':
+    if multi_region=='Enable':
         docs = summarize_relevant_codes_using_parallel_processing(codes, key)
                                 
     else:
@@ -300,8 +415,7 @@ def store_code_for_opensearch(file_type, key):
             function_name = code[start+1:end]
             # print('function_name: ', function_name)
                                                 
-            chat = get_multimodal()      
-                                        
+            chat = get_chat()                                              
             summary = summary_of_code(chat, code, file_type)
                                             
             if summary[:len(function_name)]==function_name:
@@ -1266,6 +1380,8 @@ def summarize_relevant_codes_using_parallel_processing(codes, key):
         parent_connections.append(parent_conn)
             
         chat = get_chat()
+
+        LLM_for_chat = get_multimodal_info()
         region_name = LLM_for_chat[selected_chat]['bedrock_region']
 
         process = Process(target=summarize_process_for_relevent_code, args=(child_conn, chat, code, key, region_name))
@@ -1467,9 +1583,6 @@ def lambda_handler(event, context):
                 size = int(s3obj['ContentLength'])    
 
                 if 'Metadata' in s3obj:
-                    if 'file_name' in s3obj['Metadata']:
-                        file_name = s3obj['Metadata']['file_name']
-                        print('file_name: ', file_name)
                     if 'content_type' in s3obj['Metadata']:
                         content_type = s3obj['Metadata']['content_type']
                         print('content_type: ', content_type)
@@ -1478,6 +1591,20 @@ def lambda_handler(event, context):
                         print('contextual_embedding: ', contextual_embedding)
                         global enableContexualRetrieval
                         enableContexualRetrieval = contextual_embedding
+                    if 'multi_region' in s3obj['Metadata']:
+                        global multi_region
+                        multi_region = s3obj['Metadata']['multi_region']
+                        print('multi_region: ', multi_region)
+                    if 'model_name' in s3obj['Metadata']:
+                        global model_name
+                        model_name = s3obj['Metadata']['model_name']
+                        print('model_name: ', model_name)                    
+
+                        if multi_region == "Disable":
+                            global selected_chat, selected_multimodal, selected_embedding
+                            selected_chat = 0
+                            selected_multimodal = 0
+                            selected_embedding = 0
                 
                 #attributes = ['ETag', 'Checksum', 'ObjectParts', 'StorageClass', 'ObjectSize']
                 #result = s3_client.get_object_attributes(Bucket=bucket, Key=key, ObjectAttributes=attributes)  

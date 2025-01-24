@@ -119,11 +119,11 @@ enableHybridSearch = 'true'
 selected_embedding = 0
 
 model_name = "Nova Pro"
-multi_region = 'Disable'
+multi_region = 'Enable'
 contextual_embedding = "Disable"
 
 models = info.get_model_info(model_name)
-number_of_models = len(models) if multi_region=="Enable" else 1
+number_of_models = len(models)
 
 debug_mode = "Enable"
 
@@ -148,9 +148,9 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding):
         multi_region = multiRegion
         print('multi_region: ', multi_region)
 
-        selected_chat = 0
-        selected_embedding = 0
-        number_of_models = len(models) if multi_region=="Enable" else 1
+        if multi_region == "Enable":
+            selected_chat = 0
+            selected_embedding = 0
 
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding
@@ -441,6 +441,7 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
         
         user_meta = {  # user-defined metadata
             "content_type": content_type,
+            "model_name": model_name,
             "contextual_embedding": contextual_embedding,
             "multi_region": multi_region
         }
@@ -493,7 +494,7 @@ def grade_documents_using_parallel_processing(question, documents):
             
         process = Process(target=grade_document_based_on_relevance, args=(child_conn, question, doc, models, selected_chat))
         processes.append(process)
-
+        
         selected_chat = selected_chat + 1
         if selected_chat == number_of_models:
             selected_chat = 0

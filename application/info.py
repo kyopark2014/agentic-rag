@@ -34,24 +34,6 @@ nova_lite_models = [   # Nova Pro
     }
 ]
 
-nova_lite_models = [   # Nova Lite
-    {   
-        "bedrock_region": "us-west-2", # Oregon
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-1", # N.Virginia
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
-    },
-    {
-        "bedrock_region": "us-east-2", # Ohio
-        "model_type": "nova",
-        "model_id": "us.amazon.nova-lite-v1:0"
-    }
-]
-
 claude_sonnet_3_5_v1_models = [   # Sonnet 3.5 V1
     {
         "bedrock_region": "us-west-2", # Oregon

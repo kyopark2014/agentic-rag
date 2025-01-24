@@ -47,21 +47,10 @@ const titan_embedding_v2 = [  // dimension = 1024
   }
 ];
 
-const nova_pro = [
-  {
-    "bedrock_region": "us-west-2", // Oregon
-    "model_type": "nova",
-    "model_id": "us.amazon.nova-pro-v1:0"
-  }
-];
-
-const LLM_for_chat = nova_pro; 
-const LLM_for_multimodal = nova_pro;
 const LLM_embedding = titan_embedding_v2;  //  titan_embedding_v2_single
 
 const max_object_size = 102400000; // 100 MB max size of an object, 50MB(default)
 const enableHybridSearch = 'true';
-const enableParallelSummary = 'true';
 const supportedFormat = JSON.stringify(["pdf", "txt", "csv", "pptx", "ppt", "docx", "doc", "xlsx", "py", "js", "md", "jpeg", "jpg", "png"]);  
 const enableParentDocumentRetrival = 'true';
 const vectorIndexName = projectName
@@ -295,10 +284,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
           sqsUrl: queueUrl[i],
           max_object_size: String(max_object_size),
           supportedFormat: supportedFormat,
-          LLM_for_chat: JSON.stringify(LLM_for_chat),
-          LLM_for_multimodal:JSON.stringify(LLM_for_multimodal),
           LLM_embedding: JSON.stringify(LLM_embedding),
-          enableParallelSummary: enableParallelSummary,
           enableParentDocumentRetrival: enableParentDocumentRetrival,
           enableHybridSearch: enableHybridSearch,
           vectorIndexName: vectorIndexName
