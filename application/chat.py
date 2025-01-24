@@ -1327,8 +1327,10 @@ def retrieve_documents_from_opensearch(query, top_k):
     return relevant_docs
 
 def get_rag_prompt(text):
-    print("###### get_rag_prompt ######")
-    print('modelType: ', modelType)
+    #print("###### get_rag_prompt ######")
+    #print('modelType: ', modelType)
+    chat = get_chat()
+
     if modelType == "nova":
         if isKorean(text)==True:
             system = (
@@ -1382,8 +1384,7 @@ def get_rag_prompt(text):
 
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     # print('prompt: ', prompt)
-
-    chat = get_chat()
+    
     rag_chain = prompt | chat
 
     return rag_chain
