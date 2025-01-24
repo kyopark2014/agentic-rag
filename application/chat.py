@@ -715,15 +715,22 @@ def tavily_search(query, k):
 
     return docs
 
-def extract_thinking_tag(msg, st):
-    if msg.find('<thinking>') != -1:
-        print('Remove <thinking> tag.')
-        status = msg[msg.find('<thinking>')+11:msg.find('</thinking>')]
-        print('status without tag: ', status)
-        msg = msg[msg.find('</thinking>')+12:]
-
+def extract_thinking_tag(response, st):
+    if response.find('<thinking>') != -1:
+        status = response[response.find('<thinking>')+11:response.find('</thinking>')]
+        print('agent_thinking: ', status)
+        
         if debug_mode=="Enable":
             st.info(status)
+
+        if response.find('<thinking>') == 0:
+            msg = response[response.find('</thinking>')+13:]
+        else:
+            msg = response[:response.find('<thinking>')]
+        print('msg: ', msg)
+    else:
+        msg = response
+
     return msg
 
 # load csv documents from s3

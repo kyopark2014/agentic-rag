@@ -204,12 +204,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 response, reference_docs = chat.run_agent_executor(prompt, st)
                 st.write(response)
                 print('response: ', response)
-
-                if response.find('<thinking>') != -1:
-                    print('Remove <thinking> tag.')
-                    response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
-
+                
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
                     st.rerun()
