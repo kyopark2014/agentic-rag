@@ -1073,11 +1073,13 @@ def get_summary_of_uploaded_file(file_name, st):
                 contents = f"## 이미지 분석\n\n{image_summary}"
             print('image contents: ', contents)
 
+            msg = contents
+
     global fileId
     fileId = uuid.uuid4().hex
     # print('fileId: ', fileId)
 
-    return contents
+    return msg
 
 ####################### LangChain #######################
 # General Conversation
