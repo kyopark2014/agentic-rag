@@ -1860,7 +1860,7 @@ def run_agent_executor(query, st):
 ####################### LangGraph #######################
 # Corrective RAG
 #########################################################
-modelName = False
+isKorPrompt = False
 
 def get_rewrite():
     class RewriteQuestion(BaseModel):
@@ -1871,9 +1871,9 @@ def get_rewrite():
     chat = get_chat()
     structured_llm_rewriter = chat.with_structured_output(RewriteQuestion)
     
-    print('modelName: ', modelName)
+    print('isKorPrompt: ', isKorPrompt)
     
-    if modelName:
+    if isKorPrompt:
         system = """당신은 질문 re-writer입니다. 사용자의 의도와 의미을 잘 표현할 수 있도록 질문을 한국어로 re-write하세요."""
     else:
         system = (
@@ -2150,8 +2150,8 @@ def run_corrective_rag(query, st):
     contentList = []
     reference_docs = []
     
-    global modelName
-    modelName = isKorean(query)
+    global isKorPrompt
+    isKorPrompt = isKorean(query)
             
     inputs = {"question": query}
     config = {
@@ -2445,8 +2445,8 @@ def run_self_rag(query, st):
 
     app = build()    
     
-    global modelName
-    modelName = isKorean(query)
+    global isKorPrompt
+    isKorPrompt = isKorean(query)
 
     global contentList, reference_docs
     contentList = []
@@ -2676,8 +2676,8 @@ def run_self_corrective_rag(query, st):
 
     app = buildSelCorrectivefRAG()
 
-    global modelName
-    modelName = isKorean(query)
+    global isKorPrompt
+    isKorPrompt = isKorean(query)
 
     global contentList, reference_docs
     contentList = []

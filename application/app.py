@@ -44,18 +44,18 @@ with st.sidebar:
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
 
-    # debug Mode
+    # model selection box
     modelName = st.selectbox(
         '🖊️ 사용 모델을 선택하세요',
         ('Nova Pro', 'Nova Lite', 'Claude Sonnet 3.5', 'Claude Sonnet 3.0', 'Claude Haiku 3.5')
     )
     
-    # debug Mode
+    # debug checkbox
     select_debugMode = st.checkbox('Debug Mode', value=True)
     debugMode = 'Enable' if select_debugMode else 'Disable'
     #print('debugMode: ', debugMode)
 
-    # debug Mode
+    # multi region check box
     select_multiRegion = st.checkbox('Multi Region', value=True)
     multiRegion = 'Enable' if select_multiRegion else 'Disable'
     #print('multiRegion: ', multiRegion)
