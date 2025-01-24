@@ -194,7 +194,7 @@ def get_chat():
     modelId = profile['model_id']
     maxOutputTokens = 4096
     modelType = profile['model_type']
-    print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+    print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}, modelType: {modelType}')
 
     if profile['model_type'] == 'nova':
         STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
@@ -243,7 +243,7 @@ def get_parallel_processing_chat(models, selected):
     modelId = profile['model_id']
     modelType = profile['model_type']
     maxOutputTokens = 4096
-    print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+    print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}, modelType: {modelType}')
 
     if profile['model_type'] == 'nova':
         STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
@@ -528,6 +528,10 @@ def get_retrieval_grader(chat):
         ]
     )
     
+    # from langchain_core.output_parsers import PydanticOutputParser  # not supported for Nova
+    # parser = PydanticOutputParser(pydantic_object=GradeDocuments)
+    # retrieval_grader = grade_prompt | chat | parser
+
     structured_llm_grader = chat.with_structured_output(GradeDocuments)
     retrieval_grader = grade_prompt | structured_llm_grader
     return retrieval_grader
