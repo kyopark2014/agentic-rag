@@ -440,19 +440,19 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
             content_type = "image/png"
         
         user_meta = {  # user-defined metadata
-            "file_name": file_name,
             "content_type": content_type,
             "contextual_embedding": contextual_embedding,
             "multi_region": multi_region
         }
         
-        s3_client.put_object(
+        response = s3_client.put_object(
             Bucket=bucketName, 
             Key=s3_key, 
             ContentType=content_type,
             Metadata = user_meta,
             Body=file_bytes            
         )
+        print('upload response: ', response)
 
         url = f"https://{bucketName}.s3.amazonaws.com/{s3_key}"
         return url
@@ -883,14 +883,14 @@ def summary_of_code(code, mode):
     
     return summary
 
-def use_multimodal(img_base64, query):    
-    multimodal = get_chat()
-    
-    if query == "":
-        query = "그림에 대해 상세히 설명해줘."
+def summary_image(chat, img_base64, instruction):  
+    print('instruction: ', instruction)  
+    if instruction:
+        query = f"{instruction}. <result> tag를 붙여주세요."
+    else:
+        query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. markdown 포맷으로 답변을 작성합니다."
     
     messages = [
-        SystemMessage(content="답변은 500자 이내의 한국어로 설명해주세요."),
         HumanMessage(
             content=[
                 {
@@ -906,21 +906,24 @@ def use_multimodal(img_base64, query):
         )
     ]
     
-    try: 
-        result = multimodal.invoke(messages)
+    for attempt in range(5):
+        print('attempt: ', attempt)
+        try: 
+            result = chat.invoke(messages)
+            
+            extracted_text = result.content
+            # print('summary from an image: ', extracted_text)
+            break
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)                    
+            raise Exception ("Not able to request to LLM")
         
-        summary = result.content
-        print('result of code summarization: ', summary)
-    except Exception:
-        err_msg = traceback.format_exc()
-        print('error message: ', err_msg)                    
-        raise Exception ("Not able to request to LLM")
-    
-    return summary
+    return extracted_text
 
 def extract_text(img_base64):    
     multimodal = get_chat()
-    query = "텍스트를 추출해서 utf8로 변환하세요. <result> tag를 붙여주세요."
+    query = "텍스트를 추출해서 markdown 포맷으로 변환하세요. <result> tag를 붙여주세요."
     
     messages = [
         HumanMessage(
@@ -938,21 +941,24 @@ def extract_text(img_base64):
         )
     ]
     
-    try: 
-        result = multimodal.invoke(messages)
-        
-        extracted_text = result.content
-        print('result of text extraction from an image: ', extracted_text)
-    except Exception:
-        err_msg = traceback.format_exc()
-        print('error message: ', err_msg)                    
-        raise Exception ("Not able to request to LLM")
+    for attempt in range(5):
+        print('attempt: ', attempt)
+        try: 
+            result = multimodal.invoke(messages)
+            
+            extracted_text = result.content
+            # print('result of text extraction from an image: ', extracted_text)
+            break
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)                    
+            raise Exception ("Not able to request to LLM")
     
     return extracted_text
 
 fileId = uuid.uuid4().hex
 print('fileId: ', fileId)
-def get_summary_of_uploaded_file(file_name):
+def get_summary_of_uploaded_file(file_name, st):
     file_type = file_name[file_name.rfind('.')+1:len(file_name)]            
     print('file_type: ', file_type)
     
@@ -1005,6 +1011,8 @@ def get_summary_of_uploaded_file(file_name):
         
         s3_client = boto3.client('s3') 
             
+        if debug_mode=="Enable":
+            st.info("이미지를 가져옵니다.")
         image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+file_name)
         # print('image_obj: ', image_obj)
         
@@ -1028,27 +1036,38 @@ def get_summary_of_uploaded_file(file_name):
         img.save(buffer, format="PNG")
         img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
                
-        # verify the image
-        msg = use_multimodal(img_base64, "이미지에서 의미를 설명하세요.")       
-        
         # extract text from the image
+        if debug_mode=="Enable":
+            st.info("이미지에서 텍스트를 추출합니다.")
+        
         text = extract_text(img_base64)
+        # print('extracted text: ', text)
 
-        extracted_text = ""
+        contents = text
         if text.find('<result>') != -1:
             extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
             print('extracted_text: ', extracted_text)
-        else:
-            extracted_text = text
-        
-        if len(extracted_text)>10:
-            msg += f"\n\n[추출된 Text]\n{extracted_text}\n"
+
+            if debug_mode=="Enable":
+                st.info(f"### 추출된 텍스트\n\n{extracted_text}")
+
+            if debug_mode=="Enable":
+                st.info("이미지의 내용을 분석합니다.")
+            chat = get_chat()
+            image_summary = summary_image(chat, img_base64, "")
+            print('image summary: ', image_summary)
+            
+            if len(extracted_text) > 30:
+                contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
+            else:
+                contents = f"## 이미지 분석\n\n{image_summary}"
+            print('image contents: ', contents)
 
     global fileId
     fileId = uuid.uuid4().hex
-    print('fileId: ', fileId)
+    # print('fileId: ', fileId)
 
-    return msg
+    return contents
 
 ####################### LangChain #######################
 # General Conversation

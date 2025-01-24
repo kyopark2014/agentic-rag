@@ -84,23 +84,25 @@ if clear_button==True:
 file_name = ""
 if uploaded_file is not None and clear_button==False:
     if uploaded_file.name:        
+        if debugMode=='Enable':
+            st.info('이미지를 업로드합니다.')
+
         file_name = uploaded_file.name
         file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
         print('file_url: ', file_url) 
+            
+        progress_text = f'선택한 "{file_name}"을 업로드하고 파일 내용을 요약하고 있습니다...'
+        # my_bar = st.sidebar.progress(0, text=progress_text)
         
-        progress_text = f"선택한 {file_name}을 업로드하고 파일 내용을 요약하고 있습니다..."
-        my_bar = st.sidebar.progress(0, text=progress_text)
-
-        for percent_complete in range(100):
-            time.sleep(0.2)
-            my_bar.progress(percent_complete + 1, text=progress_text)
-
-        msg = chat.get_summary_of_uploaded_file(file_name)
+        # for percent_complete in range(100):
+        #     time.sleep(0.2)
+        #     my_bar.progress(percent_complete + 1, text=progress_text)
+        if debugMode=='Enable':
+            st.info(progress_text)
+    
+        msg = chat.get_summary_of_uploaded_file(file_name, st)
         st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
         print('msg: ', msg)
-
-        uploaded_file.name = None
-        uploaded_file = None
         st.rerun()
 
 # Initialize chat history

@@ -1286,7 +1286,7 @@ def summarize_relevant_codes_using_parallel_processing(codes, key):
     return relevant_codes
 
 def extract_text(chat, img_base64):    
-    query = "텍스트를 추출해서 utf8로 변환하세요. <result> tag를 붙여주세요."
+    query = "텍스트를 추출해서 markdown 포맷으로 변환하세요. <result> tag를 붙여주세요."
     
     messages = [
         HumanMessage(
@@ -1304,20 +1304,23 @@ def extract_text(chat, img_base64):
         )
     ]
     
-    try: 
-        result = chat.invoke(messages)
-        
-        extracted_text = result.content
-        # print('result of text extraction from an image: ', extracted_text)
-    except Exception:
-        err_msg = traceback.format_exc()
-        print('error message: ', err_msg)                    
-        raise Exception ("Not able to request to LLM")
+    for attempt in range(5):
+        print('attempt: ', attempt)
+        try: 
+            result = chat.invoke(messages)
+            
+            extracted_text = result.content
+            # print('result of text extraction from an image: ', extracted_text)
+            break
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)                    
+            raise Exception ("Not able to request to LLM")
     
     return extracted_text
 
-def summary_image(chat, img_base64):    
-    query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. <result> tag를 붙여주세요."
+def summary_image(chat, img_base64):  
+    query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. markdown 포맷으로 답변을 작성합니다."
     
     messages = [
         HumanMessage(
@@ -1335,16 +1338,19 @@ def summary_image(chat, img_base64):
         )
     ]
     
-    try: 
-        result = chat.invoke(messages)
+    for attempt in range(5):
+        print('attempt: ', attempt)
+        try: 
+            result = chat.invoke(messages)
+            
+            extracted_text = result.content
+            # print('summary from an image: ', extracted_text)
+            break
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)                    
+            raise Exception ("Not able to request to LLM")
         
-        extracted_text = result.content
-        # print('summary from an image: ', extracted_text)
-    except Exception:
-        err_msg = traceback.format_exc()
-        print('error message: ', err_msg)                    
-        raise Exception ("Not able to request to LLM")
-    
     return extracted_text
 
 def get_documentId(key, category):
