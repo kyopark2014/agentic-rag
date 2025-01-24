@@ -438,6 +438,228 @@ sudo systemctl stop streamlit
 sudo runuser -l ec2-user -c "/home/ec2-user/.local/bin/streamlit run /home/ec2-user/agentic-rag/application/app.py"
 ```
 
+### Contextual Embedding 
+
+[Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval)와 같이 contextual embedding을 이용하여 chunk에 대한 설명을 추가하면, 검색의 정확도를 높일 수 있습니다. 또한 BM25(keyword) 검색은 OpenSearch의 hybrid 검색을 통해 구현할 수 있습니다. 상세한 코드는 [lambda_function.py](./lambda-document-manager/lambda_function.py)를 참조합니다.
+
+```python
+def get_contexual_docs(whole_doc, splitted_docs):
+    contextual_template = (
+        "<document>"
+        "{WHOLE_DOCUMENT}"
+        "</document>"
+        "Here is the chunk we want to situate within the whole document."
+        "<chunk>"
+        "{CHUNK_CONTENT}"
+        "</chunk>"
+        "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk."
+        "Answer only with the succinct context and nothing else."
+        "Put it in <result> tags."
+    )          
+    
+    contextual_prompt = ChatPromptTemplate([
+        ('human', contextual_template)
+    ])
+
+    docs = []
+    for i, doc in enumerate(splitted_docs):        
+        chat = get_contexual_retrieval_chat()
+        
+        contexual_chain = contextual_prompt | chat
+            
+        response = contexual_chain.invoke(
+            {
+                "WHOLE_DOCUMENT": whole_doc.page_content,
+                "CHUNK_CONTENT": doc.page_content
+            }
+        )
+        output = response.content
+        contextualized_chunk = output[output.find('<result>')+8:len(output)-9]
+        
+        docs.append(
+            Document(
+                page_content=contextualized_chunk+"\n\n"+doc.page_content,
+                metadata=doc.metadata
+            )
+        )
+    return docs
+```
+
+#### Case 1: 기업의 지분율
+
+아래의 경우는 기업의 지분율에 대한 데이터로 아래 chunk에는 단순히 지분율 열거하고 있습니다.
+
+```text
+structure as of 3 January 2024 (date of last disclosure) is as follows:
+Suzano Holding SA, Brazil - 27.76%  
+David Feffer - 4.04%  
+Daniel Feffer - 3.63%  
+Jorge Feffer - 3.60%  
+Ruben Feffer - 3.54%  
+Alden Fundo De Investimento Em Ações, Brazil - 1.98%  
+Other investors hold the remaining 55.45%
+Suzano Holding SA is majority-owned by the founding Feffer family
+Ultimate Beneficial Owners
+and/or Persons with Significant
+ControlFilings show that the beneficial owners/persons with significant control
+are members of the Feffer family, namely David Feffer, Daniel Feffer,
+Jorge Feffer, and Ruben Feffer
+Directors Executive Directors:  
+Walter Schalka - Chief Executive Officer  
+Aires Galhardo - Executive Officer - Pulp Operation  
+Carlos Aníbal de Almeida Jr - Executive Officer - Forestry, Logistics and
+Procurement  
+Christian Orglmeister - Executive Officer - New Businesses, Strategy, IT,
+Digital and Communication
+```
+
+아래는 contexualized chunk입니다. 원본 chunk에 없는 회사명과 ownership에 대한 정보를 포함하고 있습니다.
+
+```text
+This chunk provides details on the ownership structure and key executives of Suzano SA, 
+the company that is the subject of the overall document.
+It is likely included to provide background information on the company's corporate structure and leadership.
+```
+
+#### Case 2: 기본의 finanacial information
+
+아래는 어떤 기업의 financial 정보에 대한 chunk 입니다.
+
+```text
+Type of Compilation Consolidated Consolidated Consolidated
+Currency / UnitsBRL ‘000 (USD 1 =
+BRL 5.04)BRL ‘000 (USD 1 =
+BRL 5.29)BRL ‘000 (USD 1 =
+BRL 5.64)
+Turnover 29,384,030 49,830,946 40,965,431
+Gross results 11,082,919 25,009,658 20,349,843
+Depreciation (5,294,748) (7,206,125) (6,879,132)
+Operating profit (loss) 9,058,460 22,222,781 18,180,191
+Interest income 1,215,644 967,010 272,556
+Interest expense (3,483,674) (4,590,370) (4,221,301)
+Other income (expense) 3,511,470 6,432,800 (9,347,234)
+Profit (loss) before tax 12,569,930 8,832,957 (17,642,129)
+Tax (2,978,271) (197,425) (6,928,009)
+Net profit (loss) 9,591,659 23,394,887 8,635,532
+Net profit (loss) attributable to
+minorities/non-controlling
+interests14,154 13,270 9,146
+Net profit (loss) attributable to the
+company9,575,938 23,119,235 8,751,864
+Long-term assets 103,391,275 96,075,318 84,872,211
+Fixed assets 57,718,542 50,656,634 38,169,703
+Goodwill and other intangibles 14,877,234 15,192,971 16,034,339
+```
+아래는 contexualized chunk입니다. chunk에 없는 회사명을 포함한 정보를 제공합니다.
+
+```text
+This chunk provides detailed financial information about Suzano SA, 
+including its turnover, gross results, operating profit, net profit, and asset details. 
+It is part of the overall assessment and rating of Suzano SA presented in the document.
+```
+
+#### Case 3: 전화번호
+
+아래는 회사 연락처에 대한 chunk입니다. 
+
+```text
+|Telephone|+55 11 3503&amp;#45;9000|
+|Email|ri@suzano.com.br|
+|Company Details||
+|Company Type|Publicly Listed|
+|Company Status|Operating|
+|Sector|Industrial|
+|Place of Incorporation|Brazil|
+|Region of Incorporation|Bahia|
+|Date of Incorporation|17 December 1987|
+|Company Registered Number|CNPJ (Tax Id. No.): 16.404.287/0001&amp;#45;55|
+```
+이때의 contexualized chunk의 결과는 아래와 같습니다. chunk에 없는 회사의 연락처에 대한 정보를 제공할 수 있습니다.
+
+```text
+This chunk provides detailed company information about Suzano SA,
+including its contact details, company type, status, sector, place and date of incorporation, and registered number.
+This information is part of the overall assessment and rating of Suzano SA presented in the document.
+```
+
+### 이미지에서 텍스트 추출
+
+이미지는 LLM에서 처리할 수 있도록 resize후에 텍스트를 추출합니다. 이때 LLM이 문서의 내용을 추출할 수 있도록 회사명등을 이용해 정보를 제공합니다.
+
+```python
+def store_image_for_opensearch(key, page, subject_company, rating_date):
+    image_obj = s3_client.get_object(Bucket=s3_bucket, Key=key)
+                        
+    image_content = image_obj['Body'].read()
+    img = Image.open(BytesIO(image_content))
+                        
+    width, height = img.size     
+    pos = key.rfind('/')
+    prefix = key[pos+1:pos+5]
+    print('img_prefix: ', prefix)    
+    if pdf_profile=='ocean' and prefix == "img_":
+        area = (0, 175, width, height-175)
+        img = img.crop(area)
+            
+        width, height = img.size 
+        print(f"(croped) width: {width}, height: {height}, size: {width*height}")
+                
+    if width < 100 or height < 100:  # skip small size image
+        return []
+                
+    isResized = False
+    while(width*height > 5242880):
+        width = int(width/2)
+        height = int(height/2)
+        isResized = True
+        print(f"(resized) width: {width}, height: {height}, size: {width*height}")
+           
+    try:             
+        if isResized:
+            img = img.resize((width, height))
+                             
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                                                                        
+        # extract text from the image
+        chat = get_multimodal()
+        text = extract_text(chat, img_base64, subject_company)
+        extracted_text = text[text.find('<result>')+8:len(text)-9] # remove <result> tag
+        
+        summary = summary_image(chat, img_base64, subject_company)
+        image_summary = summary[summary.find('<result>')+8:len(summary)-9] # remove <result> tag
+        
+        if len(extracted_text) > 30:
+            contents = f"[이미지 요약]\n{image_summary}\n\n[추출된 텍스트]\n{extracted_text}"
+        else:
+            contents = f"[이미지 요약]\n{image_summary}"
+        print('image contents: ', contents)
+
+        docs = []        
+        if len(contents) > 30:
+            docs.append(
+                Document(
+                    page_content=contents,
+                    metadata={
+                        'name': key,
+                        'url': path+parse.quote(key),
+                        'page': page,
+                        'subject_company': subject_company,
+                        'rating_date': rating_date
+                    }
+                )
+            )         
+        print('docs size: ', len(docs))
+        
+        return add_to_opensearch(docs, key)
+    
+    except Exception:
+        err_msg = traceback.format_exc()
+        print('error message: ', err_msg)                
+        
+        return []
+```
 
 
 ## 직접 실습 해보기
