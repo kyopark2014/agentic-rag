@@ -70,14 +70,6 @@ path = config["sharing_url"] if "sharing_url" in config else None
 if path is None:
     raise Exception ("No Sharing URL")
 
-credentials = boto3.Session().get_credentials()
-service = "aoss" 
-awsauth = AWSV4SignerAuth(credentials, region, service)
-
-s3_arn = config["s3_arn"] if "s3_arn" in config else None
-if s3_arn is None:
-    raise Exception ("No S3 ARN")
-
 parsingModelArn = f"arn:aws:bedrock:{region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
 embeddingModelArn = f"arn:aws:bedrock:{region}::foundation-model/amazon.titan-embed-text-v2:0"
 
@@ -90,10 +82,7 @@ grade_state = "LLM" # LLM, PRIORITY_SEARCH, OTHERS
 doc_prefix = s3_prefix+'/'
 useEnhancedSearch = False
 
-selected_chat = 0
-
 userId = "demo"
-modelType = "nova"
 map_chain = dict() 
 
 # RAG
@@ -119,17 +108,18 @@ enableHybridSearch = 'true'
 selected_embedding = 0
 
 model_name = "Nova Pro"
+model_type = "nova"
 multi_region = 'Enable'
 contextual_embedding = "Disable"
+debug_mode = "Enable"
 
 models = info.get_model_info(model_name)
 number_of_models = len(models)
-
-debug_mode = "Enable"
+selected_chat = 0
 
 def update(modelName, debugMode, multiRegion, contextualEmbedding):    
     global model_name, debug_mode, multi_region, contextual_embedding     
-    global models, number_of_models, selected_chat, selected_embedding 
+    global selected_chat, selected_embedding, models, number_of_models
     
     if model_name != modelName:
         model_name = modelName
@@ -147,10 +137,9 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding):
     if multi_region != multiRegion:
         multi_region = multiRegion
         print('multi_region: ', multi_region)
-
-        if multi_region == "Enable":
-            selected_chat = 0
-            selected_embedding = 0
+        
+        selected_chat = 0
+        selected_embedding = 0
 
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding
@@ -185,7 +174,7 @@ def save_chat_history(text, msg):
         memory_chain.chat_memory.add_ai_message(msg) 
 
 def get_chat():
-    global selected_chat, modelType
+    global selected_chat, model_type
 
     profile = models[selected_chat]
     # print('profile: ', profile)
@@ -193,8 +182,8 @@ def get_chat():
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
     maxOutputTokens = 4096
-    modelType = profile['model_type']
-    print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}, modelType: {modelType}')
+    model_type = profile['model_type']
+    print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}, model_type: {model_type}')
 
     if profile['model_type'] == 'nova':
         STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
@@ -237,13 +226,13 @@ def get_chat():
     return chat
 
 def get_parallel_processing_chat(models, selected):
-    global modelType
+    global model_type
     profile = models[selected]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
-    modelType = profile['model_type']
+    model_type = profile['model_type']
     maxOutputTokens = 4096
-    print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}, modelType: {modelType}')
+    print(f'selected_chat: {selected}, bedrock_region: {bedrock_region}, modelId: {modelId}, model_type: {model_type}')
 
     if profile['model_type'] == 'nova':
         STOP_SEQUENCE = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
@@ -884,7 +873,9 @@ def summary_of_code(code, mode):
     
     return summary
 
-def summary_image(chat, img_base64, instruction):      
+def summary_image(img_base64, instruction):      
+    chat = get_chat()
+
     if instruction:
         print('instruction: ', instruction)  
         query = f"{instruction}. <result> tag를 붙여주세요."
@@ -955,6 +946,10 @@ def extract_text(img_base64):
             print('error message: ', err_msg)                    
             raise Exception ("Not able to request to LLM")
     
+    print('extracted_text: ', extracted_text)
+    if len(extracted_text)<10:
+        extracted_text = "텍스트를 추출하지 못하였습니다."    
+
     return extracted_text
 
 fileId = uuid.uuid4().hex
@@ -1049,31 +1044,32 @@ def get_summary_of_uploaded_file(file_name, st):
         text = extract_text(img_base64)
         # print('extracted text: ', text)
 
-        contents = text
         if text.find('<result>') != -1:
             extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
             # print('extracted_text: ', extracted_text)
+        else:
+            extracted_text = text
 
-            if debug_mode=="Enable":
-                status = f"### 추출된 텍스트\n\n{extracted_text}"
-                print('status: ', status)
-                st.info(status)
-        
-            if debug_mode=="Enable":
-                status = "이미지의 내용을 분석합니다."
-                print('status: ', status)
-                st.info(status)
-            chat = get_chat()
-            image_summary = summary_image(chat, img_base64, "")
-            print('image summary: ', image_summary)
+        if debug_mode=="Enable":
+            status = f"### 추출된 텍스트\n\n{extracted_text}"
+            print('status: ', status)
+            st.info(status)
+    
+        if debug_mode=="Enable":
+            status = "이미지의 내용을 분석합니다."
+            print('status: ', status)
+            st.info(status)
+
+        image_summary = summary_image(img_base64, "")
+        print('image summary: ', image_summary)
             
-            if len(extracted_text) > 30:
-                contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
-            else:
-                contents = f"## 이미지 분석\n\n{image_summary}"
-            print('image contents: ', contents)
+        if len(extracted_text) > 10:
+            contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
+        else:
+            contents = f"## 이미지 분석\n\n{image_summary}"
+        print('image contents: ', contents)
 
-            msg = contents
+        msg = contents
 
     global fileId
     fileId = uuid.uuid4().hex
@@ -1366,9 +1362,9 @@ def retrieve_documents_from_opensearch(query, top_k):
 def get_rag_prompt(text):
     print("###### get_rag_prompt ######")
     chat = get_chat()
-    print('modelType: ', modelType)
+    print('model_type: ', model_type)
     
-    if modelType == "nova":
+    if model_type == "nova":
         if isKorean(text)==True:
             system = (
                 "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
@@ -1391,7 +1387,7 @@ def get_rag_prompt(text):
             "{context}"
         ) 
         
-    elif modelType == "claude":
+    elif model_type == "claude":
         if isKorean(text)==True:
             system = (
                 "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."

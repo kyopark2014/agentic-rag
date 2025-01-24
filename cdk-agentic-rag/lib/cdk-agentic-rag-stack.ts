@@ -548,7 +548,6 @@ export class CdkAgenticRagStack extends cdk.Stack {
       "accountId": accountId,
       "region": region,
       "s3_bucket": s3Bucket.bucketName,
-      "s3_arn": s3Bucket.bucketArn,
       "sharing_url": 'https://'+distribution_docs.domainName,
       "opensearch_url": opensearch_url,
       "LLM_embedding": JSON.stringify(LLM_embedding),

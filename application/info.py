@@ -46,12 +46,7 @@ claude_sonnet_3_5_v1_models = [   # Sonnet 3.5 V1
         "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
     },
     {
-        "bedrock_region": "eu-central-1", # Frankfurt
-        "model_type": "claude",
-        "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    },
-    {
-        "bedrock_region": "ap-northeast-1", # Tokyo
+        "bedrock_region": "us-east-2", # Ohio
         "model_type": "claude",
         "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
     }
@@ -94,20 +89,20 @@ claude_haiku_3_5_models = [   # Haiku 3.5
 ]
 
 def get_model_info(model_name):
-    parallel_processing_models = []
+    models = []
 
     if model_name == "Nova Pro":
-        parallel_processing_models = nova_pro_models
+        models = nova_pro_models
     elif model_name == "Nova Lite":
-        parallel_processing_models = nova_lite_models
+        models = nova_lite_models
     elif model_name == "Claude Sonnet 3.0":
-        parallel_processing_models = claude_sonnet_3_5_v1_models
+        models = claude_sonnet_3_5_v1_models
     elif model_name == "Claude Sonnet 3.5":
-        parallel_processing_models = claude_sonnet_3_5_v2_models
+        models = claude_sonnet_3_5_v2_models
     elif model_name == "Claude Haiku 3.5":
-        parallel_processing_models = claude_haiku_3_5_models
+        models = claude_haiku_3_5_models
 
-    return parallel_processing_models
+    return models
 
 STOP_SEQUENCE_CLAUDE = "\n\nHuman:" 
 STOP_SEQUENCE_NOVA = '"\n\n<thinking>", "\n<thinking>", " <thinking>"'
