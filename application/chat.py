@@ -883,9 +883,9 @@ def summary_of_code(code, mode):
     
     return summary
 
-def summary_image(chat, img_base64, instruction):  
-    print('instruction: ', instruction)  
+def summary_image(chat, img_base64, instruction):      
     if instruction:
+        print('instruction: ', instruction)  
         query = f"{instruction}. <result> tag를 붙여주세요."
     else:
         query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. markdown 포맷으로 답변을 작성합니다."
@@ -957,7 +957,7 @@ def extract_text(img_base64):
     return extracted_text
 
 fileId = uuid.uuid4().hex
-print('fileId: ', fileId)
+# print('fileId: ', fileId)
 def get_summary_of_uploaded_file(file_name, st):
     file_type = file_name[file_name.rfind('.')+1:len(file_name)]            
     print('file_type: ', file_type)
@@ -1012,7 +1012,10 @@ def get_summary_of_uploaded_file(file_name, st):
         s3_client = boto3.client('s3') 
             
         if debug_mode=="Enable":
-            st.info("이미지를 가져옵니다.")
+            status = "이미지를 가져옵니다."
+            print('status: ', status)
+            st.info(status)
+            
         image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+file_name)
         # print('image_obj: ', image_obj)
         
@@ -1038,7 +1041,9 @@ def get_summary_of_uploaded_file(file_name, st):
                
         # extract text from the image
         if debug_mode=="Enable":
-            st.info("이미지에서 텍스트를 추출합니다.")
+            status = "이미지에서 텍스트를 추출합니다."
+            print('status: ', status)
+            st.info(status)
         
         text = extract_text(img_base64)
         # print('extracted text: ', text)
@@ -1046,13 +1051,17 @@ def get_summary_of_uploaded_file(file_name, st):
         contents = text
         if text.find('<result>') != -1:
             extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
-            print('extracted_text: ', extracted_text)
+            # print('extracted_text: ', extracted_text)
 
             if debug_mode=="Enable":
-                st.info(f"### 추출된 텍스트\n\n{extracted_text}")
-
+                status = f"### 추출된 텍스트\n\n{extracted_text}"
+                print('status: ', status)
+                st.info(status)
+        
             if debug_mode=="Enable":
-                st.info("이미지의 내용을 분석합니다.")
+                status = "이미지의 내용을 분석합니다."
+                print('status: ', status)
+                st.info(status)
             chat = get_chat()
             image_summary = summary_image(chat, img_base64, "")
             print('image summary: ', image_summary)

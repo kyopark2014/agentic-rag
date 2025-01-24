@@ -83,9 +83,13 @@ if clear_button==True:
 # Preview the uploaded image in the sidebar
 file_name = ""
 if uploaded_file is not None and clear_button==False:
-    if uploaded_file.name:        
+    if uploaded_file.name:      
+        chat.initiate()
+
         if debugMode=='Enable':
-            st.info('이미지를 업로드합니다.')
+            status = '이미지를 업로드합니다.'
+            print('status: ', status)
+            st.info(status)
 
         file_name = uploaded_file.name
         file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
@@ -98,6 +102,7 @@ if uploaded_file is not None and clear_button==False:
         #     time.sleep(0.2)
         #     my_bar.progress(percent_complete + 1, text=progress_text)
         if debugMode=='Enable':
+            print('status: ', progress_text)
             st.info(progress_text)
     
         msg = chat.get_summary_of_uploaded_file(file_name, st)
