@@ -102,6 +102,8 @@ if uploaded_file and clear_button==False:
 
         st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
         print('msg: ', msg)
+
+        file_list.append(file_name)
         
 # Initialize chat history
 if "messages" not in st.session_state:
