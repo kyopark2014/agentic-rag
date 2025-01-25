@@ -65,6 +65,11 @@ with st.sidebar:
     contextualEmbedding = 'Enable' if selected_contextualEmbedding else 'Disable'
     #print('contextualEmbedding: ', contextualEmbedding)
 
+    # chart checkbox 
+    selected_chart = st.checkbox('Chart', value=True)
+    chart = 'Enable' if selected_chart else 'Disable'
+    #print('chart: ', chart)
+
     chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
 
     st.subheader("📋 문서 업로드")
@@ -151,22 +156,23 @@ if clear_button or "messages" not in st.session_state:
 
     chat.clear_chat_history()
 
-if mode == 'Agentic RAG':
-    col1, col2, col3 = st.columns([0.1, 0.25, 0.1])
-    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/agentic-rag.png"
-    col2.image(url)
-elif mode == 'Corrective RAG':
-    col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
-    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/corrective-rag.png"
-    col2.image(url)    
-elif mode == 'Self RAG':
-    col1, col2, col3 = st.columns([0.1, 2.0, 0.1])
-    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-rag2.png"
-    col2.image(url)
-elif mode == 'Self Corrective RAG':
-    col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
-    url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-corrective-rag.png"
-    col2.image(url)
+if chart == 'Enable':
+    if mode == 'Agentic RAG':
+        col1, col2, col3 = st.columns([0.1, 0.25, 0.1])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/agentic-rag.png"
+        col2.image(url)
+    elif mode == 'Corrective RAG':
+        col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/corrective-rag.png"
+        col2.image(url)    
+    elif mode == 'Self RAG':
+        col1, col2, col3 = st.columns([0.1, 2.0, 0.1])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-rag2.png"
+        col2.image(url)
+    elif mode == 'Self Corrective RAG':
+        col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-corrective-rag.png"
+        col2.image(url)
 
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
