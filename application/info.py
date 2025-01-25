@@ -7,7 +7,7 @@ nova_pro_models = [   # Nova Pro
     {
         "bedrock_region": "us-east-1", # N.Virginia
         "model_type": "nova",
-        "model_id": "amazon.nova-pro-v1:0"
+        "model_id": "us.amazon.nova-pro-v1:0"
     },
     {
         "bedrock_region": "us-east-2", # Ohio
@@ -25,7 +25,7 @@ nova_lite_models = [   # Nova Pro
     {
         "bedrock_region": "us-east-1", # N.Virginia
         "model_type": "nova",
-        "model_id": "amazon.nova-lite-v1:0"
+        "model_id": "us.amazon.nova-lite-v1:0"
     },
     {
         "bedrock_region": "us-east-2", # Ohio
