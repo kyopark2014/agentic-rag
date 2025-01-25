@@ -2567,26 +2567,31 @@ def run_self_corrective_rag(query, st):
         if not web_fallback:
             return "finalize_response"        
                 
-        # Check hallucination
-        if debug_mode=="Enable":
-            st.info(f"환각(hallucination)인지 검토합니다.")
+        if len(documents):
+            # Check hallucination
+            if debug_mode=="Enable":
+                st.info(f"환각(hallucination)인지 검토합니다.")
 
-        print("---Hallucination?---")    
-        hallucination_grader = get_hallucination_grader()
-        hallucination_grade = "no"
+            print("---Hallucination?---")    
+            hallucination_grader = get_hallucination_grader()
+            hallucination_grade = "no"
 
-        for attempt in range(3):   
-            print('attempt: ', attempt)
-            
-            try:        
-                score = hallucination_grader.invoke(
-                    {"documents": documents, "generation": generation}
-                )
-                hallucination_grade = score.binary_score
-                break
-            except Exception:
-                err_msg = traceback.format_exc()
-                print('error message: ', err_msg)
+            for attempt in range(3):   
+                print('attempt: ', attempt)
+                
+                try:        
+                    score = hallucination_grader.invoke(
+                        {"documents": documents, "generation": generation}
+                    )
+                    hallucination_grade = score.binary_score
+                    break
+                except Exception:
+                    err_msg = traceback.format_exc()
+                    print('error message: ', err_msg)
+        else:
+            hallucination_grade = "yes" # not hallucination
+            if debug_mode=="Enable":
+                st.info(f"검색된 문서가 없어서 환격(hallucination)은 테스트하지 않습니다.")            
 
         if hallucination_grade == "no":
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
@@ -2595,7 +2600,7 @@ def run_self_corrective_rag(query, st):
             reference_docs = []
             return "generate" if retries < max_retries else "websearch"
 
-        if debug_mode=="Enable":
+        if debug_mode=="Enable" and len(documents):
             st.info(f"환각이 아닙니다.")
         
         print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
