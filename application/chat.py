@@ -2353,31 +2353,38 @@ def run_self_rag(query, st):
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
-        # Check Hallucination
-        if debug_mode=="Enable":
-            st.info(f"환각(hallucination)인지 검토합니다.")
+        print("len(documents): ", len(documents))
 
-        hallucination_grader = get_hallucination_grader()        
-
-        hallucination_grade = "no"
-        for attempt in range(3):   
-            print('attempt: ', attempt)
-            try:
-                score = hallucination_grader.invoke(
-                    {"documents": documents, "generation": generation}
-                )
-                hallucination_grade = score.binary_score
-                break
-            except Exception:
-                err_msg = traceback.format_exc()
-                print('error message: ', err_msg)       
-        
-        print("hallucination_grade: ", hallucination_grade)
-        print("retries: ", retries)
-
-        answer_grader = get_answer_grader()    
-        if hallucination_grade == "yes":
+        if len(documents):
+            # Check Hallucination
             if debug_mode=="Enable":
+                st.info(f"환각(hallucination)인지 검토합니다.")
+
+            hallucination_grader = get_hallucination_grader()        
+
+            hallucination_grade = "no"
+            for attempt in range(3):   
+                print('attempt: ', attempt)
+                try:
+                    score = hallucination_grader.invoke(
+                        {"documents": documents, "generation": generation}
+                    )
+                    hallucination_grade = score.binary_score
+                    break
+                except Exception:
+                    err_msg = traceback.format_exc()
+                    print('error message: ', err_msg)       
+            
+            print("hallucination_grade: ", hallucination_grade)
+            print("retries: ", retries)
+        else:
+            hallucination_grade = "yes" # not hallucination
+            if debug_mode=="Enable":
+                st.info(f"검색된 문서가 없어서 환격(hallucination)은 테스트하지 않습니다.")
+
+        answer_grader = get_answer_grader()
+        if hallucination_grade == "yes":
+            if debug_mode=="Enable" and len(documents):
                 st.info(f"환각이 아닙니다.")
 
             print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
@@ -2407,7 +2414,7 @@ def run_self_rag(query, st):
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             if debug_mode=="Enable":
-                st.info(f"환각(halucination)입니다.")            
+                st.info(f"환각(halucination)입니다.")
             reference_docs = []
             return "not supported" if retries < max_retries else "not available"
         
