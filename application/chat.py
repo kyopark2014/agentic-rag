@@ -1367,9 +1367,9 @@ def retrieve_documents_from_opensearch(query, top_k):
     return relevant_docs
 
 def get_rag_prompt(text):
-    print("###### get_rag_prompt ######")
+    # print("###### get_rag_prompt ######")
     chat = get_chat()
-    print('model_type: ', model_type)
+    # print('model_type: ', model_type)
     
     if model_type == "nova":
         if isKorean(text)==True:
@@ -2500,6 +2500,9 @@ def run_self_corrective_rag(query, st):
             st.info(f"RAG 검색을 수행합니다. 검색어: {question}")
         
         docs = retrieve_documents_from_opensearch(question, top_k=4)
+
+        if debug_mode == "Enable":
+            st.info(f"{len(docs)}개의 문서가 선택되었습니다.")
         
         return {"documents": docs, "question": question, "web_fallback": True}
 
@@ -2566,6 +2569,8 @@ def run_self_corrective_rag(query, st):
 
         if not web_fallback:
             return "finalize_response"        
+        
+        print("len(documents): ", len(documents))
                 
         if len(documents):
             # Check hallucination
@@ -2639,7 +2644,8 @@ def run_self_corrective_rag(query, st):
     def web_search_node(state: State, config):
         print("###### web_search ######")
         question = state["question"]
-        documents = state["documents"]
+        # documents = state["documents"]
+        documents = [] # initiate 
         
         if debug_mode=="Enable":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
