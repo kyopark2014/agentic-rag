@@ -820,7 +820,7 @@ def load_document(file_type, s3_file_name):
             raw_text.append(page.extract_text())
         contents = '\n'.join(raw_text)    
         
-    elif file_type == 'txt':        
+    elif file_type == 'txt' or file_type == 'md':
         contents = doc.get()['Body'].read().decode('utf-8')
         
     print('contents: ', contents)
