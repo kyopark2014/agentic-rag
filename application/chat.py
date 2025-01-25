@@ -61,8 +61,9 @@ if accountId is None:
 region = config["region"] if "region" in config else "us-west-2"
 print('region: ', region)
 
-bucketName = config["bucketName"] if "bucketName" in config else f"storage-for-{projectName}-{accountId}-{region}" 
-print('bucketName: ', bucketName)
+s3_bucket = config["s3_bucket"] if "s3_bucket" in config else None
+if s3_bucket is None:
+    raise Exception ("No storage!")
 
 s3_prefix = 'docs'
 
@@ -99,9 +100,6 @@ if opensearch_account is None:
 opensearch_passwd = config["opensearch_passwd"] if "opensearch_passwd" in config else None
 if opensearch_passwd is None:
     raise Exception ("Not available OpenSearch!")
-s3_bucket = config["s3_bucket"] if "s3_bucket" in config else None
-if s3_bucket is None:
-    raise Exception ("No storage!")
 
 enableParentDocumentRetrival = 'true'
 enableHybridSearch = 'true'
@@ -436,7 +434,7 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
         }
         
         response = s3_client.put_object(
-            Bucket=bucketName, 
+            Bucket=s3_bucket, 
             Key=s3_key, 
             ContentType=content_type,
             Metadata = user_meta,
@@ -444,7 +442,7 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
         )
         print('upload response: ', response)
 
-        url = f"https://{bucketName}.s3.amazonaws.com/{s3_key}"
+        url = f"https://{s3_bucket}.s3.amazonaws.com/{s3_key}"
         return url
     
     except Exception as e:
@@ -1454,7 +1452,7 @@ def get_answer_using_opensearch(text, st):
     if debug_mode == "Enable":
         st.info(f"결과를 생성중입니다.")
     relevant_context = ""
-    for document in relevant_docs:
+    for document in filtered_docs:
         relevant_context = relevant_context + document.page_content + "\n\n"        
     # print('relevant_context: ', relevant_context)
 
