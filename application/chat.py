@@ -675,11 +675,13 @@ def get_references(docs):
         excerpt = re.sub('"', '', excerpt)
         excerpt = re.sub('#', '', excerpt)        
         print('excerpt(quotation removed): ', excerpt)
+
+        name = name[name.rfind('/')+1:]
         
         if page:                
-            reference += f"{i+1}. {page}page in [{name}]({url})), {excerpt[:40]}...\n"
+            reference += f"{i+1}. {page}page in [{name}]({url})), {excerpt[:30]}...\n"
         else:
-            reference += f"{i+1}. [{name}]({url}), {excerpt[:40]}...\n"
+            reference += f"{i+1}. [{name}]({url}), {excerpt[:30]}...\n"
 
     if reference: 
         reference = "\n\n#### 관련 문서\n"+reference

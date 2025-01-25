@@ -58,7 +58,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "nova",
-            "model_id": "us.amazon.nova-pro-v1:0"
+            "model_id": "amazon.nova-pro-v1:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
@@ -76,7 +76,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "nova",
-            "model_id": "us.amazon.nova-pro-v1:0"
+            "model_id": "amazon.nova-pro-v1:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
@@ -99,11 +99,11 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-2", # Ohio
             "model_type": "claude",
-            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+            "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
         }
     ]
 
-    claude_sonnet_3_5_v2_models = [   # Sonnet 3.5 V1
+    claude_sonnet_3_5_v2_models = [   # Sonnet 3.5 V2
         {
             "bedrock_region": "us-west-2", # Oregon
             "model_type": "claude",
@@ -112,12 +112,12 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "claude",
-            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
             "model_type": "claude",
-            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
         }
     ]
 
@@ -129,11 +129,6 @@ def get_multimodal_info():
         },
         {
             "bedrock_region": "us-east-1", # N.Virginia
-            "model_type": "claude",
-            "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
-        },
-        {
-            "bedrock_region": "us-east-2", # Ohio
             "model_type": "claude",
             "model_id": "anthropic.claude-3-sonnet-20240229-v1:0"
         }
@@ -153,7 +148,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-2", # Ohio
             "model_type": "claude",
-            "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
+            "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
         }
     ]
 
@@ -162,7 +157,7 @@ def get_multimodal_info():
     elif model_name == 'Nova Lite':
         return nova_lite_models
     elif model_name == 'Claude Sonnet 3.5':
-        return claude_sonnet_3_5_v1_models  # claude_sonnet_3_5_v2_models
+        return claude_sonnet_3_5_v2_models  # claude_sonnet_3_5_v1_models
     elif model_name == 'Claude Sonnet 3.0':
         return claude_sonnet_3_0_models    
     elif model_name == 'Claude Haiku 3.5':
