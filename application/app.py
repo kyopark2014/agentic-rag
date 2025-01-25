@@ -92,7 +92,7 @@ if uploaded_file is not None and clear_button==False:
         chat.initiate()
 
         if debugMode=='Enable':
-            status = '이미지를 업로드합니다.'
+            status = '선택한 파일을 업로드합니다.'
             print('status: ', status)
             st.info(status)
 
