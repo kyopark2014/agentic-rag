@@ -192,17 +192,16 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             chat.save_chat_history(prompt, response)
 
         elif mode == 'RAG':
-            with st.status("thinking...", expanded=True, state="running") as status:
-                response, reference_docs = chat.get_answer_using_opensearch(prompt, st)     
-                st.write(response)
-                print('response: ', response)                  
-                
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
-
-                chat.save_chat_history(prompt, response)
+            response, reference_docs = chat.get_answer_using_opensearch(prompt, st)     
+            st.write(response)
+            print('response: ', response)                  
             
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            if debugMode != "Enable":
+                st.rerun()
+
+            chat.save_chat_history(prompt, response)
+        
             show_references(reference_docs) 
 
         elif mode == 'Agentic RAG':
