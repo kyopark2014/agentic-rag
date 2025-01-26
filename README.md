@@ -81,59 +81,31 @@ print('stream: ', stream)
 
 ### Basic RAG
 
-여기에서는 RAG 구현을 위하여 Amazon Bedrock의 knowledge base를 이용합니다. Amazon S3에 필요한 문서를 올려놓고, knowledge base에서 동기화를 하면, OpenSearch에 문서들이 chunk 단위로 저장되므로 문서를 쉽게 RAG로 올리고 편하게 사용할 수 있습니다. 또한 Hiearchical chunk을 이용하여 검색 정확도를 높이면서 필요한 context를 충분히 제공합니다. 
+여기에서는 RAG 구현을 위하여 OpenSearch를 이용합니다. 
 
-
-LangChain의 [AmazonKnowledgeBasesRetriever](https://api.python.langchain.com/en/latest/community/retrievers/langchain_community.retrievers.bedrock.AmazonKnowledgeBasesRetriever.html)을 이용하여 retriever를 등록합니다. 
+LangChain의 [OpenSearchVectorSearch](https://sj-langchain.readthedocs.io/en/latest/vectorstores/langchain.vectorstores.opensearch_vector_search.OpenSearchVectorSearch.html)을 이용하여 관련된 문서를 가져옵니다.
 
 ```python
-from langchain_aws import AmazonKnowledgeBasesRetriever
-
-retriever = AmazonKnowledgeBasesRetriever(
-    knowledge_base_id=knowledge_base_id, 
-    retrieval_config={"vectorSearchConfiguration": {
-        "numberOfResults": top_k,
-        "overrideSearchType": "HYBRID"   
-    }},
-    region_name=bedrock_region
+vectorstore_opensearch = OpenSearchVectorSearch(
+    index_name = index_name,
+    is_aoss = False,
+    ef_search = 1024,
+    m=48,
+    embedding_function = bedrock_embedding,
+    opensearch_url=opensearch_url,
+    http_auth=(opensearch_account, opensearch_passwd)
 )
+relevant_documents = vectorstore_opensearch.similarity_search_with_score(
+    query = query,
+    k = top_k
+)
+for i, document in enumerate(relevant_documents):
+    name = document[0].metadata['name']
+    url = document[0].metadata['url']
+    content = document[0].page_content
 ```
 
-Knowledge base로 조회하여 얻어진 문서를 필요에 따라 아래와 같이 재정리합니다. 이때 파일 경로로 사용하는 url은 application에서 다운로드 가능하도록 CloudFront의 도메인과 파일명을 조화합여 생성합니다.
-
-```python
-documents = retriever.invoke(query)
-for doc in documents:
-    content = ""
-    if doc.page_content:
-        content = doc.page_content    
-    score = doc.metadata["score"]    
-    link = ""
-    if "s3Location" in doc.metadata["location"]:
-        link = doc.metadata["location"]["s3Location"]["uri"] if doc.metadata["location"]["s3Location"]["uri"] is not None else ""        
-        pos = link.find(f"/{doc_prefix}")
-        name = link[pos+len(doc_prefix)+1:]
-        encoded_name = parse.quote(name)
-        link = f"{path}{doc_prefix}{encoded_name}"        
-    elif "webLocation" in doc.metadata["location"]:
-        link = doc.metadata["location"]["webLocation"]["url"] if doc.metadata["location"]["webLocation"]["url"] is not None else ""
-        name = "WEB"
-    url = link
-            
-    relevant_docs.append(
-        Document(
-            page_content=content,
-            metadata={
-                'name': name,
-                'score': score,
-                'url': url,
-                'from': 'RAG'
-            },
-        )
-    )    
-```        
-
-얻어온 문서가 적절한지를 판단하기 위하여 아래와 같이 prompt를 이용해 관련도를 평가하고 [structured output](https://github.com/kyopark2014/langgraph-agent/blob/main/structured-output.md)을 이용해 결과를 추출합니다.
+얻어온 문서가 적절한지를 판단하기 위하여 아래와 같이 prompt를 이용해 관련도를 평가하고 [structured output](https://github.com/kyopark2014/langgraph-agent/blob/main/structured-output.md)을 이용해 관련도를 평가합니다.
 
 ```python
 system = (
@@ -195,7 +167,7 @@ print(stream.content)
 
 세부 코드는 [Lambda-Document](https://github.com/kyopark2014/agentic-rag/blob/main/lambda-document-manager/lambda_function.py)을 참조합니다.
 
-#### Parent-Child Chunking
+#### Hiearchical Chunking (Parent-Child Chunking)
 
 문서를 크기에 따라 parent chunk와 child chunk로 나누어서 child chunk를 찾은 후에 LLM의 context에는 parent chunk를 사용하면, 검색의 정확도는 높이고 충분한 문서를 context로 활용할 수 있습니다. 아래에서는 parent doc을 생성후에 다시 child doc을 생성합니다. child doc은 metadata에 parent doc의 id를 가지고 있습니다. parent, child의 문서 id는 저장하여 문서 삭제, 업데이트시에 활용됩니다.
 
