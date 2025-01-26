@@ -13,6 +13,10 @@
 
 <img width="800" alt="image" src="https://github.com/user-attachments/assets/3353ade1-db6e-4d30-baa5-be78d9820418" />
 
+여기에서는 Lambda-Document를 이용해 입력된 문서를 parsing하여 OpenSearch에 push합니다. 이를 위한 event driven 방식의 데이터 처리 방식은 아래와 같습니다.
+
+![image](https://github.com/user-attachments/assets/f89ac20b-91e3-490c-a34f-703c2957b022)
+
 
 ## 상세 구현
 
