@@ -79,7 +79,7 @@ stream = chain.stream(
 print('stream: ', stream)
 ```
 
-### RAG
+### Basic RAG
 
 여기에서는 RAG 구현을 위하여 Amazon Bedrock의 knowledge base를 이용합니다. Amazon S3에 필요한 문서를 올려놓고, knowledge base에서 동기화를 하면, OpenSearch에 문서들이 chunk 단위로 저장되므로 문서를 쉽게 RAG로 올리고 편하게 사용할 수 있습니다. 또한 Hiearchical chunk을 이용하여 검색 정확도를 높이면서 필요한 context를 충분히 제공합니다. 
 
@@ -191,7 +191,85 @@ stream = chain.invoke(
 print(stream.content)    
 ```
 
-### Agentic RAG
+### Advanced RAG
+
+세부 코드는 [Lambda-Document](https://github.com/kyopark2014/agentic-rag/blob/main/lambda-document-manager/lambda_function.py)을 참조합니다.
+
+#### Parent-Child Chunking
+
+문서를 크기에 따라 parent chunk와 child chunk로 나누어서 child chunk를 찾은 후에 LLM의 context에는 parent chunk를 사용하면, 검색의 정확도는 높이고 충분한 문서를 context로 활용할 수 있습니다. 아래에서는 parent doc을 생성후에 다시 child doc을 생성합니다. child doc은 metadata에 parent doc의 id를 가지고 있습니다. parent, child의 문서 id는 저장하여 문서 삭제, 업데이트시에 활용됩니다.
+
+```python
+parent_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=2000,
+    chunk_overlap=100,
+    separators=["\n\n", "\n", ".", " ", ""],
+    length_function = len,
+)
+child_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=400,
+    chunk_overlap=50,
+    # separators=["\n\n", "\n", ".", " ", ""],
+    length_function = len,
+)
+parent_docs = parent_splitter.split_documents(docs)
+parent_doc_ids = vectorstore.add_documents(parent_docs, bulk_size = 10000)
+ids = parent_doc_ids
+
+for i, doc in enumerate(parent_docs):
+    _id = parent_doc_ids[i]
+    sub_docs = child_splitter.split_documents([doc])
+    for _doc in sub_docs:
+        _doc.metadata["parent_doc_id"] = _id
+        _doc.metadata["doc_level"] = "child"
+
+    child_doc_ids = vectorstore.add_documents(sub_docs, bulk_size = 10000)
+    ids += child_doc_ids
+```
+
+[chat.py](https://github.com/kyopark2014/agentic-rag/blob/main/application/chat.py)와 같이 pre_filter를 이용해 child 문서를 검색하여, parent_doc_id를 이용해 parent 문서를 context로 활용합니다. 하나의 parent doc에서 여러개의 child doc이 선택될 수 있으로 parent_doc_id를 이용해 중복을 확인하여 제거합니다.
+
+```python
+result = vectorstore_opensearch.similarity_search_with_score(
+    query = query,
+    k = top_k*2,  
+    search_type="script_scoring",
+    pre_filter={"term": {"metadata.doc_level": "child"}}
+)
+relevant_documents = []
+docList = []
+for re in result:
+    if 'parent_doc_id' in re[0].metadata:
+        parent_doc_id = re[0].metadata['parent_doc_id']
+        doc_level = re[0].metadata['doc_level']                
+        if doc_level == 'child':
+            if parent_doc_id in docList:
+                print('duplicated!')
+            else:
+                relevant_documents.append(re)
+                docList.append(parent_doc_id)                        
+                if len(relevant_documents)>=top_k:
+                    break
+```
+
+검색된 child 문서에서 parent_doc_id를 추출하여 parent 문서를 가져와 활용합니다.
+
+```python
+for i, document in enumerate(relevant_documents):
+    parent_doc_id = document[0].metadata['parent_doc_id']
+    doc_level = document[0].metadata['doc_level']    
+    content, name, url = get_parent_content(parent_doc_id)
+
+def get_parent_content(parent_doc_id):
+    response = os_client.get(
+        index = index_name, 
+        id = parent_doc_id
+    )    
+    source = response['_source']                                
+    return source['text']
+```
+
+## Agentic RAG
 
 아래와 같이 activity diagram을 이용하여 node/edge/conditional edge로 구성되는 tool use 방식의 agent를 구현할 수 있습니다.
 
