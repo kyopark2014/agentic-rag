@@ -241,7 +241,7 @@ def get_parent_content(parent_doc_id):
 
 #### Header / Footer의 제거
 
-[Header/Footer](https://github.com/kyopark2014/ocean-agent/blob/main/lambda-document-manager/lambda_function.py)에서는 이미지의 header/footer를 제거하는 것을 보여주고 있습니다. 문서의 header/footer는 문서마다 다를 수 있으므로 문서마다 header/footer의 높이를 지정하여야 합니다.
+[Header/Footer](https://github.com/kyopark2014/ocean-agent/blob/main/lambda-document-manager/lambda_function.py)에서는 이미지의 header/footer를 제거하는 것을 보여주고 있습니다. 문서의 header/footer는 문서마다 다를 수 있으므로 문서마다 header/footer의 높이를 지정하여야 합니다.
 
 ```python
 image_obj = s3_client.get_object(Bucket=s3_bucket, Key=key)
