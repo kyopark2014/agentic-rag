@@ -1,11 +1,11 @@
-# Nova로 Agentic RAG 구현하기
+# Agentic RAG 구현하기
 
 <p align="left">
     <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fkyopark2014%2Fagentic-rag&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false")](https://hits.seeyoufarm.com"/></a>
     <img alt="License" src="https://img.shields.io/badge/LICENSE-MIT-green">
 </p>
 
-Nova 모델는 동급 모델대비 빠르고, 높은 가성비와 함께 훌륭한 멀티모달 성능을 가지고 있습니다. Nova를 이용해서 RAG의 성능 향상 기법인 Agentic RAG, Corrective RAG, Self RAG를 구현하는 방법을 설명합니다. 또한 RAG의 데이터 수집에 필요한 PDF의 header/footer의 처리, 이미지의 추출 및 분석과 함께 contextual retrieval을 활용하는 방법을 설명합니다. 이를 통해서 생성형 AI 애플리케이션을 위한  데이터를 효과적으로 수집하여 활용할 수 있습니다. 여기서는 오픈소스 LLM Framework인 [LangGraph](https://langchain-ai.github.io/langgraph/)을 이용하고, 구현된 workflow들은 [Streamlit](https://streamlit.io/)을 이용해 개발 및 테스트를 수행할 수 있습니다. [AWS CDK](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-construct-library.html)를 이용하고 한번에 배포할 수 있고, [CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html) - ALB 구조를 이용해 HTTPS로 안전하게 접속할 수 있습니다. 
+여기에서는 RAG의 성능 향상 기법인 Agentic RAG, Corrective RAG, Self RAG를 구현하는 방법을 설명합니다. 또한 RAG의 데이터 수집에 필요한 PDF의 header/footer의 처리, 이미지의 추출 및 분석과 함께 contextual retrieval을 활용하는 방법을 설명합니다. 이를 통해서 생성형 AI 애플리케이션을 위한  데이터를 효과적으로 수집하여 활용할 수 있습니다. 여기서는 오픈소스 LLM Framework인 [LangGraph](https://langchain-ai.github.io/langgraph/)을 이용하고, 구현된 workflow들은 [Streamlit](https://streamlit.io/)을 이용해 개발 및 테스트를 수행할 수 있습니다. [AWS CDK](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-construct-library.html)를 이용하고 한번에 배포할 수 있고, [CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html) - ALB 구조를 이용해 HTTPS로 안전하게 접속할 수 있습니다. 
 
 ## System Architecture 
 
@@ -20,8 +20,8 @@ Agentic workflow (tool use)는 아래와 같이 구현할 수 있습니다. 상�
 
 ### Basic Chat
 
-일반적인 대화는 아래와 같이 stream으로 결과를 얻을 수 있습니다. 여기에서는 LangChain의 ChatBedrock과 Nova Pro의 모델명인 "us.amazon.nova-pro-v1:0"을 활용하고 있습니다.
-
+일반적인 대화는 아래와 같이 stream으로 결과를 얻을 수 있습니다. 여기에서는 LangChain의 ChatBedrock을 이용합니다. Model ID로 사용할 모델을 지정합니다. 아래 예제에서는 Nova Pro의 모델명인 "us.amazon.nova-pro-v1:0"을 활용하고 있습니다. Nova 모델는 동급 모델대비 빠르고, 높은 가성비와 함께 훌륭한 멀티모달 성능을 가지고 있습니다. 만약 Claude Sonnet 3.5을 사용한 다면 "anthropic.claude-3-5-sonnet-20240620-v1:0"을 입력합니다.
+ 
 ```python
 modelId = "us.amazon.nova-pro-v1:0"
 bedrock_region = "us-west-2"
