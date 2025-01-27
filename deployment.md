@@ -14,7 +14,9 @@
 
 [EC2 - Launch an Instance](https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#LaunchInstances:)에 접속하여 Name으로 "chatbot"이라고 입력합니다.
 
-![noname](https://github.com/user-attachments/assets/acdac538-ea1e-4b32-a7f8-efc2b0e34664)
+
+![image](https://github.com/user-attachments/assets/67269c44-d67c-4476-8eb8-b221dd137b87)
+
 
 OS로 기본값인 "Amazon Linux"를 유지하고, Amazon Machine Image (AMI)도 기본값을 그대로 사용합니다.
 
@@ -22,11 +24,13 @@ Instance Type은 "m5.large"를 선택하고, Key pair는 "Proceeding without a k
 
 [Configure storage]는 편의상 80G로 변경하고 [Launch instance]를 선택하여 EC2를 설치합니다. 
 
-![noname](https://github.com/user-attachments/assets/84edf46d-0aa8-478c-8727-1301cf32f4db)
+![image](https://github.com/user-attachments/assets/76fca8c4-8e1d-4676-8dbc-5400ec1cede7)
+
 
 이후 아래와 같이 instance를 선택하여 EC2 instance 화면으로 이동하거나, console에서 [EC-Instances](https://us-west-2.console.aws.amazon.com/ec2/home?region=us-west-2#Instances:)로 접속합니다. 
 
-![noname](https://github.com/user-attachments/assets/f5c82338-3e05-4c26-bdef-642c81f2c5d2)
+![image](https://github.com/user-attachments/assets/03be7486-9f19-457f-9262-e33d0432c2b5)
+
 
 아래와 같이 instance에서 [Connect]를 선택하여 [Session Manager]로 접속합니다. 
 
