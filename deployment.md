@@ -46,6 +46,14 @@ sudo service docker start
 sudo npm install -g aws-cdk --prefix /usr/local
 ```
 
+만약 AWS CLI가 설치되지 않은 경우라면 아래 명령어로 설치합니다.
+
+```text
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+```
+
 ### 소스 다운로드 및 설치 
 
 1) 소스를 다운로드합니다.
