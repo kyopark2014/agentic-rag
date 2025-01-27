@@ -56,7 +56,7 @@ with st.sidebar:
     #print('debugMode: ', debugMode)
 
     # multi region check box
-    select_multiRegion = st.checkbox('Multi Region', value=True)
+    select_multiRegion = st.checkbox('Multi Region', value=False)
     multiRegion = 'Enable' if select_multiRegion else 'Disable'
     #print('multiRegion: ', multiRegion)
 
