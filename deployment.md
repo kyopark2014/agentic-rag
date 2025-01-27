@@ -2,7 +2,7 @@
 
 ## Bedrock 사용 권한 설정하기
 
-여기에서는 us-west-2, us-east-1, us-east-2 리전을 사용합니다. [Model access](https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/modelaccess)에 접속해서 [Edit]를 선택하여 "Titan Text Embeddings V2"와 "Amazon Nova Pro"을 Vector Embedding과 LLM을 위해 enable 합니다.
+여기에서는 us-west-2, us-east-1, us-east-2 리전을 사용합니다. [Model access](https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/modelaccess)에 접속해서 [Edit]를 선택하여 Amazon과 Anthropic의 모든 model들의 사용 권한을 획득합니다. 특히, "Titan Text Embeddings V2", "Nova Pro", "Nova Lite", "Nova Micro", "Claude 3.5 Haiku", "Claude 3.5 Sonnet V2", "Claude 3.5 Sonnet", "Claude 3 Sonnet"이 사용 가능하여야 합니다. 
 
 ## 설치하기
 
