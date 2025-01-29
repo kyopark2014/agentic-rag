@@ -52,7 +52,7 @@ nova_micro_models = [   # Nova Micro
     }
 ]
 
-claude_sonnet_3_5_v1_models = [   # Sonnet 3.5 V1
+claude_3_5_sonnet_v1_models = [   # Sonnet 3.5 V1
     {
         "bedrock_region": "us-west-2", # Oregon
         "model_type": "claude",
@@ -70,7 +70,7 @@ claude_sonnet_3_5_v1_models = [   # Sonnet 3.5 V1
     }
 ]
 
-claude_sonnet_3_5_v2_models = [   # Sonnet 3.5 V2
+claude_3_5_sonnet_v2_models = [   # Sonnet 3.5 V2
     {
         "bedrock_region": "us-west-2", # Oregon
         "model_type": "claude",
@@ -88,7 +88,7 @@ claude_sonnet_3_5_v2_models = [   # Sonnet 3.5 V2
     }
 ]
 
-claude_sonnet_3_0_models = [   # Sonnet 3.0
+claude_3_0_sonnet_models = [   # Sonnet 3.0
     {
         "bedrock_region": "us-west-2", # Oregon
         "model_type": "claude",
@@ -101,7 +101,7 @@ claude_sonnet_3_0_models = [   # Sonnet 3.0
     }
 ]
 
-claude_haiku_3_5_models = [   # Haiku 3.5 
+claude_3_5_haiku_models = [   # Haiku 3.5 
     {
         "bedrock_region": "us-west-2", # Oregon
         "model_type": "claude",
@@ -128,12 +128,12 @@ def get_model_info(model_name):
         models = nova_lite_models
     elif model_name == "Nova Micro":
         models = nova_micro_models
-    elif model_name == "Claude Sonnet 3.0":
-        models = claude_sonnet_3_0_models
-    elif model_name == "Claude Sonnet 3.5":
-        models = claude_sonnet_3_5_v2_models
-    elif model_name == "Claude Haiku 3.5":
-        models = claude_haiku_3_5_models
+    elif model_name == "Claude 3.0 Sonnet":
+        models = claude_3_0_sonnet_models
+    elif model_name == "Claude 3.5 Sonnet":
+        models = claude_3_5_sonnet_v2_models
+    elif model_name == "Claude 3.5 Haiku":
+        models = claude_3_5_haiku_models
 
     return models
 
