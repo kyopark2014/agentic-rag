@@ -179,8 +179,11 @@ def get_chat():
         
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
-    maxOutputTokens = 4096
     model_type = profile['model_type']
+    if model_type == 'claude':
+        maxOutputTokens = 4096 # 4k
+    else:
+        maxOutputTokens = 5120 # 5k
     print(f'LLM: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}, model_type: {model_type}')
 
     if profile['model_type'] == 'nova':
