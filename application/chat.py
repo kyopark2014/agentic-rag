@@ -2899,7 +2899,7 @@ def run_reflection(query, st):
 
         # grade   
         if debug_mode == "Enable":
-            st.info(f"초안(draft)를 생성하기 위하여, knowledge base를 조회합니다.") 
+            st.info(f"초안(draft)를 생성하기 위하여, RAG를 조회합니다.") 
 
         top_k = 4
         relevant_docs = retrieve_documents_from_opensearch(query, top_k=top_k)
@@ -3021,14 +3021,40 @@ def run_reflection(query, st):
         if debug_mode=="Enable":
             st.info("개선할 사항을 반영하여 답변을 생성중입니다.")
         
-        top_k = 2
-        relevant_docs = []
+        top_k = 2        
+        selected_docs = []
         for q in state["search_queries"]:
+            relevant_docs = []
+            filtered_docs = []
+            if debug_mode=="Enable":
+                st.info(f"검색을 수행합니다. 검색어: {q}")
+        
+            relevant_docs = retrieve_documents_from_opensearch(q, top_k)
             relevant_docs += retrieve_documents_from_tavily(q, top_k)
 
+            # grade   
+            if debug_mode == "Enable":
+                st.info(f"가져온 {len(relevant_docs)}개의 문서를 평가하고 있습니다.") 
+
+            filtered_docs += grade_documents(q, relevant_docs) # grading    
+
+            if debug_mode == "Enable":
+                st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
+
+            selected_docs += filtered_docs
+
+        selected_docs += check_duplication(selected_docs) # check duplication
+        
+        global reference_docs
+        if relevant_docs:
+            reference_docs += selected_docs
+
+        if debug_mode == "Enable":
+            st.info(f"최종으로 {len(reference_docs)}개의 문서가 선택되었습니다.")
+
         content = ""
-        if len(relevant_docs):
-            for d in relevant_docs:
+        if len(selected_docs):
+            for d in selected_docs:
                 content += d.page_content+'\n\n'
             print('content: ', content)
 
@@ -3057,11 +3083,7 @@ def run_reflection(query, st):
 
             except Exception:
                 err_msg = traceback.format_exc()
-                print('error message: ', err_msg)
-                
-        global reference_docs
-        if relevant_docs:
-            reference_docs += relevant_docs
+                print('error message: ', err_msg)                        
 
         revision_number = state["revision_number"] if state.get("revision_number") is not None else 1
         return {
@@ -3263,6 +3285,9 @@ def run_planning(query, st):
 
         filtered_docs = grade_documents(plan[0], relevant_docs) # grading    
         filtered_docs = check_duplication(filtered_docs) # check duplication
+
+        if debug_mode == "Enable":
+            st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
                 
         # generate
         if debug_mode == "Enable":
