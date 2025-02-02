@@ -10,6 +10,7 @@ import uuid
 import base64
 import csv
 import info # user defined info such as models
+import operator
 
 from io import BytesIO
 from PIL import Image
@@ -318,7 +319,7 @@ if langsmith_api_key:
     os.environ["LANGCHAIN_PROJECT"] = langchain_project
 
 # api key to use Tavily Search
-tavily_key = ""
+tavily_key = tavily_api_wrapper = ""
 try:
     get_tavily_api_secret = secretsmanager.get_secret_value(
         SecretId=f"tavilyapikey-{projectName}"
@@ -2731,3 +2732,755 @@ def run_self_corrective_rag(query, st):
         
     return value["messages"][-1].content + reference, reference_docs
 
+####################### LangGraph #######################
+# Agentic Workflow: Reflection
+#########################################################
+def extract_reflection(draft):
+    class Reflection(BaseModel):
+        missing: str = Field(description="Critique of what is missing.")
+        advisable: str = Field(description="Critique of what is helpful for better answer")
+        superfluous: str = Field(description="Critique of what is superfluous")
+
+    class Research(BaseModel):
+        """Provide reflection and then follow up with search queries to improve the answer."""
+
+        reflection: Reflection = Field(description="Your reflection on the initial answer.")
+        search_queries: list[str] = Field(
+            description="1-3 search queries for researching improvements to address the critique of your current answer."
+        )
+    
+    class ReflectionKor(BaseModel):
+        missing: str = Field(description="작성된 글에 있어야하는데 빠진 내용이나 단점")
+        advisable: str = Field(description="더 좋은 글이 되기 위해 추가하여야 할 내용")
+        superfluous: str = Field(description="글의 길이나 스타일에 대한 비평")
+
+    class ResearchKor(BaseModel):
+        """글쓰기를 개선하기 위한 검색 쿼리를 제공합니다."""
+
+        reflection: ReflectionKor = Field(description="작성된 글에 대한 평가")
+        search_queries: list[str] = Field(
+            description="도출된 비평을 해결하기 위한 3개 이내의 검색어"            
+        )    
+
+    reflection = []
+    search_queries = []
+    for attempt in range(5):
+        try:
+            chat = get_chat()
+            if isKorean(draft):
+                structured_llm = chat.with_structured_output(Research, include_raw=True)
+            else:
+                structured_llm = chat.with_structured_output(Research, include_raw=True)
+            
+            info = structured_llm.invoke(draft)
+            print(f'attempt: {attempt}, info: {info}')
+                
+            if not info['parsed'] == None:
+                parsed_info = info['parsed']
+                print('parsed_info: ', parsed_info)
+                reflection = [parsed_info.reflection.missing, parsed_info.reflection.advisable]
+                search_queries = parsed_info.search_queries
+                
+                print('reflection: ', parsed_info.reflection)            
+                print('search_queries: ', search_queries)      
+
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg) 
+
+        return reflection, search_queries
+
+def extract_reflection2(draft):
+    system = (
+        "주어진 문장을 향상시키기 위하여 아래와 같은 항목으로 개선사항을 추출합니다."
+        "missing: 작성된 글에 있어야하는데 빠진 내용이나 단점"
+        "advisable: 더 좋은 글이 되기 위해 추가하여야 할 내용"
+        "superfluous: 글의 길이나 스타일에 대한 비평"    
+        "<result> tag를 붙여주세요."
+    )
+    critique_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system),
+            ("human", "{draft}"),
+        ]
+    )
+
+    reflection = ""
+    for attempt in range(5):
+        try:
+            chat = get_chat()
+            chain = critique_prompt | chat
+            result = chain.invoke({
+                "draft": draft
+            })
+            print("result: ", result)
+
+            output = result.content
+
+            if output.find('<result>') != -1:
+                output = output[output.find('<result>')+8:output.find('</result>')]
+            print('output: ', output)
+
+            reflection = output            
+            break
+                
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg) 
+
+    # search queries
+    search_queries = []
+    class Queries(BaseModel):
+        """Provide reflection and then follow up with search queries to improve the answer."""
+
+        search_queries: list[str] = Field(
+            description="1-3 search queries for researching improvements to address the critique of your current answer."
+        )
+    class QueriesKor(BaseModel):
+        """글쓰기를 개선하기 위한 검색어를 제공합니다."""
+
+        search_queries: list[str] = Field(
+            description="주어진 비평을 해결하기 위한 3개 이내의 검색어"            
+        )    
+
+    system = (
+        "당신은 주어진 Draft를 개선하여 더 좋은 글쓰기를 하고자 합니다."
+        "주어진 비평을 반영하여 초안을 개선하기 위한 3개 이내의 검색어를 추천합니다."
+    )
+    queries_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system),
+            ("human", "Draft: {draft} \n\n Critiques: {reflection}"),
+        ]
+    )
+    for attempt in range(5):
+        try:
+            chat = get_chat()
+            if isKorean(draft):
+                structured_llm_queries = chat.with_structured_output(QueriesKor, include_raw=True)
+            else:
+                structured_llm_queries = chat.with_structured_output(Queries, include_raw=True)
+
+            retrieval_quries = queries_prompt | structured_llm_queries
+            
+            info = retrieval_quries.invoke({
+                "draft": draft,
+                "reflection": reflection
+            })
+            print(f'attempt: {attempt}, info: {info}')
+                
+            if not info['parsed'] == None:
+                parsed_info = info['parsed']
+                print('parsed_info: ', parsed_info)
+                search_queries = parsed_info.search_queries
+                print("search_queries: ", search_queries)
+            break
+                
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg) 
+
+    return reflection, search_queries
+
+def run_reflection(query, st):
+    class State(TypedDict):
+        task: str
+        draft: str
+        reflection: list
+        search_queries: list
+            
+    def generate(state: State, config):    
+        print("###### generate ######")
+        print('task: ', state['task'])
+
+        global reference_docs
+
+        query = state['task']
+
+        # grade   
+        if debug_mode == "Enable":
+            st.info(f"초안(draft)를 생성하기 위하여, knowledge base를 조회합니다.") 
+
+        top_k = 4
+        relevant_docs = retrieve_documents_from_opensearch(query, top_k=top_k)
+    
+        # grade   
+        if debug_mode == "Enable":
+            st.info(f"가져온 {len(relevant_docs)}개의 문서를 평가하고 있습니다.") 
+
+        filtered_docs = grade_documents(query, relevant_docs)    
+        filtered_docs = check_duplication(filtered_docs) # duplication checker
+        if len(filtered_docs):
+            reference_docs += filtered_docs 
+
+        if debug_mode == "Enable":
+            st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
+        
+        # generate
+        if debug_mode == "Enable":
+            st.info(f"초안을 생성중입니다.")
+        
+        relevant_context = ""
+        for document in filtered_docs:
+            relevant_context = relevant_context + document.page_content + "\n\n"        
+        # print('relevant_context: ', relevant_context)
+
+        rag_chain = get_rag_prompt(query)
+                        
+        draft = ""    
+        try: 
+            result = rag_chain.invoke(
+                {
+                    "question": query,
+                    "context": relevant_context                
+                }
+            )
+            print('result: ', result)
+
+            draft = result.content        
+            if draft.find('<result>')!=-1:
+                draft = draft[draft.find('<result>')+8:draft.find('</result>')]
+            
+            if debug_mode=="Enable":
+                st.info(f"생성된 초안: {draft}")
+            
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)                    
+            raise Exception ("Not able to request to LLM")
+        
+        return {"draft":draft}
+    
+    def reflect(state: State, config):
+        print("###### reflect ######")
+        print('draft: ', state["draft"])
+
+        draft = state["draft"]
+        
+        if debug_mode=="Enable":
+            st.info('초안을 검토하여 부족하거나 보강할 내용을 찾고, 추가 검색어를 추출합니다.')
+
+        reflection, search_queries = extract_reflection2(draft)
+        if debug_mode=="Enable":  
+            st.info(f'개선할 사항: {reflection}')
+            st.info(f'추가 검색어: {search_queries}')        
+
+        return {
+            "reflection": reflection,
+            "search_queries": search_queries
+        }
+    
+    def get_revise_prompt(text):
+        chat = get_chat()
+
+        if isKorean(text):
+            system = (
+                "당신은 장문 작성에 능숙한 유능한 글쓰기 도우미입니다."                
+                "draft를 critique과 information 참조하여 수정하세오."
+                "최종 결과는 한국어로 작성하고 <result> tag를 붙여주세요."
+            )
+            human = (
+                "draft:"
+                "{draft}"
+                            
+                "critique:"
+                "{reflection}"
+
+                "information:"
+                "{content}"
+            )
+        else:
+            system = (
+                "You are an excellent writing assistant." 
+                "Revise this draft using the critique and additional information."
+                "Provide the final answer with <result> tag."
+            )
+            human = (
+                "draft:"
+                "{draft}"
+                            
+                "critique:"
+                "{reflection}"
+
+                "information:"
+                "{content}"
+            )                    
+        revise_prompt = ChatPromptTemplate.from_messages(
+            [
+                ('system', system),
+                ("human", human),
+            ]
+        )                    
+        revise_chain = revise_prompt | chat
+
+        return revise_chain
+    
+    def revise_answer(state: State, config):           
+        print("###### revise_answer ######")
+
+        if debug_mode=="Enable":
+            st.info("개선할 사항을 반영하여 답변을 생성중입니다.")
+        
+        top_k = 2
+        relevant_docs = []
+        for q in state["search_queries"]:
+            relevant_docs += retrieve_documents_from_tavily(q, top_k)
+
+        content = ""
+        if len(relevant_docs):
+            for d in relevant_docs:
+                content += d.page_content+'\n\n'
+            print('content: ', content)
+
+        for attempt in range(5):
+            print(f'attempt: {attempt}')
+
+            revise_chain = get_revise_prompt(state['task'])
+            try:
+                res = revise_chain.invoke(
+                    {
+                        "draft": state['draft'],
+                        "reflection": state["reflection"],
+                        "content": content
+                    }
+                )
+                output = res.content
+                print('output: ', output)
+
+                if output.find('<result>')==-1:
+                    draft = output
+                else:
+                    draft = output[output.find('<result>')+8:output.find('</result>')]
+
+                print('revised_answer: ', draft)
+                break
+
+            except Exception:
+                err_msg = traceback.format_exc()
+                print('error message: ', err_msg)
+                
+        global reference_docs
+        if relevant_docs:
+            reference_docs += relevant_docs
+
+        revision_number = state["revision_number"] if state.get("revision_number") is not None else 1
+        return {
+            "draft": draft, 
+            "revision_number": revision_number + 1
+        }
+    
+    MAX_REVISIONS = 1
+    def should_continue(state: State, config):
+        print("###### should_continue ######")
+        max_revisions = config.get("configurable", {}).get("max_revisions", MAX_REVISIONS)
+        print("max_revisions: ", max_revisions)
+            
+        if state["revision_number"] > max_revisions:
+            return "end"
+        return "continue"
+
+    def buildReflection():    
+        workflow = StateGraph(State)
+
+        workflow.add_node("generate", generate)
+        workflow.add_node("reflect", reflect)
+        workflow.add_node("revise_answer", revise_answer)
+
+        workflow.set_entry_point("generate")
+
+        workflow.add_conditional_edges(
+            "revise_answer", 
+            should_continue, 
+            {
+                "end": END, 
+                "continue": "reflect"}
+        )
+
+        workflow.add_edge("generate", "reflect")
+        workflow.add_edge("reflect", "revise_answer")
+        
+        app = workflow.compile()
+        
+        return app
+    
+    # initiate
+    global contentList, reference_docs
+    contentList = []
+    reference_docs = []
+
+    # workflow
+    app = buildReflection()
+        
+    inputs = {
+        "task": query
+    } 
+    config = {
+        "recursion_limit": 50,
+        "max_revisions": MAX_REVISIONS,
+        "parallel_processing": multi_region
+    }
+    
+    output = app.invoke(inputs, config)
+    print('output: ', output)
+        
+    msg = output["draft"]
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
+
+    return msg+reference, reference_docs
+
+####################### LangGraph #######################
+# Agentic Workflow: Planning (Advanced CoT)
+#########################################################
+def run_planning(query, st):
+    class State(TypedDict):
+        input: str
+        plan: list[str]
+        past_steps: Annotated[List[Tuple], operator.add]
+        info: Annotated[List[Tuple], operator.add]
+        answer: str
+
+    def plan_node(state: State, config):
+        print("###### plan ######")
+        print('input: ', state["input"])
+
+        if debug_mode=="Enable":
+            st.info(f"계획을 생성합니다. 요청사항: {state['input']}")
+        
+        system = (
+            "당신은 user의 question을 해결하기 위해 step by step plan을 생성하는 AI agent입니다."                
+            
+            "문제를 충분히 이해하고, 문제 해결을 위한 계획을 다음 형식으로 4단계 이하의 계획을 세웁니다."                
+            "각 단계는 반드시 한줄의 문장으로 AI agent가 수행할 내용을 명확히 나타냅니다."
+            "1. [질문을 해결하기 위한 단계]"
+            "2. [질문을 해결하기 위한 단계]"
+            "..."                
+        )
+        
+        human = (
+            "{question}"
+        )
+                            
+        planner_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", human),
+            ]
+        )
+        chat = get_chat()
+        planner = planner_prompt | chat
+        response = planner.invoke({
+            "question": state["input"]
+        })
+        print('response.content: ', response.content)
+        result = response.content
+        
+        #output = result[result.find('<result>')+8:result.find('</result>')]
+        output = result
+        
+        plan = output.strip().replace('\n\n', '\n')
+        planning_steps = plan.split('\n')
+        print('planning_steps: ', planning_steps)
+
+        if debug_mode=="Enable":
+            st.info(f"생성된 계획: {planning_steps}")
+        
+        return {
+            "input": state["input"],
+            "plan": planning_steps
+        }
+    
+    def generate_answer(chat, relevant_docs, text):    
+        relevant_context = ""
+        for document in relevant_docs:
+            relevant_context = relevant_context + document.page_content + "\n\n"        
+        # print('relevant_context: ', relevant_context)
+
+        if debug_mode=="Enable":
+            st.info(f"계획을 수행합니다. 현재 계획 {text}")
+
+        # generating
+        if isKorean(text)==True:
+            system = (
+                "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
+                "다음의 Reference texts을 이용하여 user의 질문에 답변합니다."
+                "모르는 질문을 받으면 솔직히 모른다고 말합니다."
+                "답변의 이유를 풀어서 명확하게 설명합니다."
+                "결과는 <result> tag를 붙여주세요."
+            )
+        else: 
+            system = (
+                "You will be acting as a thoughtful advisor."
+                "Provide a concise answer to the question at the end using reference texts." 
+                "If you don't know the answer, just say that you don't know, don't try to make up an answer."
+            )    
+        human = (
+            "Question: {input}"
+
+            "Reference texts: "
+            "{context}"
+        )
+        
+        prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+        # print('prompt: ', prompt)
+                        
+        chain = prompt | chat
+        
+        response = chain.invoke({
+            "context": relevant_context,
+            "input": text,
+        })
+        # print('response.content: ', response.content)
+
+        if response.content.find('<result>') == -1:
+            output = response.content
+        else:
+            output = response.content[response.content.find('<result>')+8:response.content.find('</result>')]        
+        # print('output: ', output)
+            
+        return output
+
+    def execute_node(state: State, config):
+        print("###### execute ######")
+        print('input: ', state["input"])
+        plan = state["plan"]
+        print('plan: ', plan) 
+        
+        chat = get_chat()
+
+        if debug_mode=="Enable":
+            st.info(f"검색을 수행합니다. 검색어 {plan[0]}")
+        
+        # retrieve
+        relevant_docs = retrieve_documents_from_opensearch(plan[0], top_k=4)
+        relevant_docs += retrieve_documents_from_tavily(plan[0], top_k=4)
+        
+        # grade   
+        if debug_mode == "Enable":
+            st.info(f"가져온 {len(relevant_docs)}개의 문서를 평가하고 있습니다.") 
+
+        filtered_docs = grade_documents(plan[0], relevant_docs) # grading    
+        filtered_docs = check_duplication(filtered_docs) # check duplication
+                
+        # generate
+        if debug_mode == "Enable":
+            st.info(f"결과를 생성중입니다.")
+
+        result = generate_answer(chat, relevant_docs, plan[0])
+        
+        print('task: ', plan[0])
+        print('executor output: ', result)
+
+        global reference_docs
+        if len(filtered_docs):
+            reference_docs += filtered_docs
+
+        if debug_mode=="Enable":
+            st.info(f"현 단계의 결과 {result}")
+        
+        # print('plan: ', state["plan"])
+        # print('past_steps: ', task)        
+        return {
+            "input": state["input"],
+            "plan": state["plan"],
+            "info": [result],
+            "past_steps": [plan[0]],
+        }
+            
+    def replan_node(state: State, config):
+        print('#### replan ####')
+        print('state of replan node: ', state)
+
+        if len(state["plan"]) == 1:
+            print('last plan: ', state["plan"])
+            return {"response":state["info"][-1]}
+        
+        if debug_mode=="Enable":
+            st.info(f"새로운 계획을 생성합니다.")
+        
+        system = (
+            "당신은 복잡한 문제를 해결하기 위해 step by step plan을 생성하는 AI agent입니다."
+            "당신은 다음의 Question에 대한 적절한 답변을 얻고자합니다."
+        )        
+        human = (
+            "Question: {input}"
+                        
+            "당신의 원래 계획은 아래와 같습니다." 
+            "Original Plan:"
+            "{plan}"
+
+            "완료한 단계는 아래와 같습니다."
+            "Past steps:"
+            "{past_steps}"
+            
+            "당신은 Original Plan의 원래 계획을 상황에 맞게 수정하세요."
+            "계획에 아직 해야 할 단계만 추가하세요. 이전에 완료한 단계는 계획에 포함하지 마세요."                
+            "수정된 계획에는 <plan> tag를 붙여주세요."
+            "만약 더 이상 계획을 세우지 않아도 Question의 주어진 질문에 답변할 있다면, 최종 결과로 Question에 대한 답변을 <result> tag를 붙여 전달합니다."
+            
+            "수정된 계획의 형식은 아래와 같습니다."
+            "각 단계는 반드시 한줄의 문장으로 AI agent가 수행할 내용을 명확히 나타냅니다."
+            "1. [질문을 해결하기 위한 단계]"
+            "2. [질문을 해결하기 위한 단계]"
+            "..."         
+        )                   
+        
+        replanner_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", human),
+            ]
+        )     
+        
+        chat = get_chat()
+        replanner = replanner_prompt | chat
+        
+        response = replanner.invoke({
+            "input": state["input"],
+            "plan": state["plan"],
+            "past_steps": state["past_steps"]
+        })
+        print('replanner output: ', response.content)
+        result = response.content
+
+        if result.find('<plan>') == -1:
+            return {"response":response.content}
+        else:
+            output = result[result.find('<plan>')+6:result.find('</plan>')]
+            print('plan output: ', output)
+
+            plans = output.strip().replace('\n\n', '\n')
+            planning_steps = plans.split('\n')
+            print('planning_steps: ', planning_steps)
+
+            if debug_mode=="Enable":
+                st.info(f"새로운 계획: {planning_steps}")
+
+            return {"plan": planning_steps}
+        
+    def should_end(state: State) -> Literal["continue", "end"]:
+        print('#### should_end ####')
+        # print('state: ', state)
+        
+        if "response" in state and state["response"]:
+            print('response: ', state["response"])            
+            next = "end"
+        else:
+            print('plan: ', state["plan"])
+            next = "continue"
+        print(f"should_end response: {next}")
+        
+        return next
+        
+    def final_answer(state: State) -> str:
+        print('#### final_answer ####')
+        
+        # get final answer
+        context = "".join(f"{info}\n" for info in state['info'])
+        print('context: ', context)
+        
+        query = state['input']
+        print('query: ', query)
+
+        if debug_mode=="Enable":
+            st.info(f"최종 답변을 생성합니다.")
+        
+        if isKorean(query)==True:
+            system = (
+                "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
+                "다음의 Reference texts을 이용하여 user의 질문에 답변합니다."
+                "답변의 이유를 풀어서 명확하게 설명합니다."
+                #"결과는 <result> tag를 붙여주세요."
+            )
+        else: 
+            system = (
+                "Here is pieces of context, contained in <context> tags."
+                "Provide a concise answer to the question at the end."
+                "Explains clearly the reason for the answer."
+                "If you don't know the answer, just say that you don't know, don't try to make up an answer."
+                #"Put it in <result> tags."
+            )
+    
+        human = (
+            "Reference texts:"
+            "{context}"
+
+            "Question: {input}"
+        )
+        
+        prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+        # print('prompt: ', prompt)
+                    
+        chat = get_chat()
+        chain = prompt | chat
+        
+        try: 
+            response = chain.invoke(
+                {
+                    "context": context,
+                    "input": query,
+                }
+            )
+            result = response.content
+
+            if result.find('<result>')==-1:
+                output = result
+            else:
+                output = result[result.find('<result>')+8:result.find('</result>')]
+                
+            print('output: ', output)
+            
+        except Exception:
+            err_msg = traceback.format_exc()
+            print('error message: ', err_msg)      
+            
+        return {"answer": output}  
+
+    def buildPlanAndExecute():
+        workflow = StateGraph(State)
+        workflow.add_node("planner", plan_node)
+        workflow.add_node("executor", execute_node)
+        workflow.add_node("replaner", replan_node)
+        workflow.add_node("final_answer", final_answer)
+        
+        workflow.set_entry_point("planner")
+        workflow.add_edge("planner", "executor")
+        workflow.add_edge("executor", "replaner")
+        workflow.add_conditional_edges(
+            "replaner",
+            should_end,
+            {
+                "continue": "executor",
+                "end": "final_answer",
+            },
+        )
+        workflow.add_edge("final_answer", END)
+
+        return workflow.compile()
+
+    # initiate
+    global contentList, reference_docs
+    contentList = []
+    reference_docs = []
+
+    # workflow
+    app = buildPlanAndExecute()    
+        
+    inputs = {"input": query}
+    config = {
+        "recursion_limit": 50
+    }
+    
+    for output in app.stream(inputs, config):   
+        for key, value in output.items():
+            print(f"Finished: {key}")
+            #print("value: ", value)            
+    print('value: ', value)
+
+    reference = ""
+    if reference_docs:
+        reference = get_references(reference_docs)
+    
+    return value["answer"]+reference, reference_docs

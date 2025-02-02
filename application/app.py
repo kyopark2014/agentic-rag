@@ -23,6 +23,12 @@ mode_descriptions = {
     ],
     "Self Corrective RAG": [
         "Self Corrective RAG를 활용하여 RAG의 성능을 향상 시킵니다."
+    ],
+    "Agent (Reflection)": [
+        "Reflection Workflow를 수행하는 Agent 구현합니다."
+    ],
+    "Agent (Planning)": [
+        "Planning Workflow를 수행하는 Agent 구현합니다."
     ]
 }
 
@@ -41,7 +47,7 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG"], index=0
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
@@ -175,6 +181,14 @@ if chart == 'Enable':
         col1, col2, col3 = st.columns([0.1, 2.0, 0.1])    
         url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/self-corrective-rag.png"
         col2.image(url)
+    elif mode == 'Agent (Reflection)':
+        col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-workflow/main/contents/reflection.png"
+        col2.image(url)    
+    elif mode == 'Agent (Planning)':
+        col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-workflow/main/contents/planning.png"
+        col2.image(url)
 
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
@@ -276,6 +290,45 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
                 chat.save_chat_history(prompt, response)
 
+            show_references(reference_docs)         
+        
+        elif mode == 'Agent (Reflection)':
+            with st.status("thinking...", expanded=True, state="running") as status:
+                # esponse, reference_docs = chat.run_knowledge_guru(prompt, st)
+                response, reference_docs = chat.run_reflection(prompt, st)     
+                st.write(response)
+                print('response: ', response)
+
+                if response.find('<thinking>') != -1:
+                    print('Remove <thinking> tag.')
+                    response = response[response.find('</thinking>')+12:]
+                    print('response without tag: ', response)
+
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                if debugMode != "Enable":
+                    st.rerun()
+
+                chat.save_chat_history(prompt, response)
+            
+            show_references(reference_docs) 
+
+        elif mode == 'Agent (Planning)':
+            with st.status("thinking...", expanded=True, state="running") as status:
+                response, reference_docs = chat.run_planning(prompt, st)
+                st.write(response)
+                print('response: ', response)
+
+                if response.find('<thinking>') != -1:
+                    print('Remove <thinking> tag.')
+                    response = response[response.find('</thinking>')+12:]
+                    print('response without tag: ', response)
+
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                if debugMode != "Enable":
+                    st.rerun()
+
+                chat.save_chat_history(prompt, response)
+            
             show_references(reference_docs) 
 
         else:
@@ -286,4 +339,3 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
             st.session_state.messages.append({"role": "assistant", "content": response})
             chat.save_chat_history(prompt, response)
-        
