@@ -69,8 +69,8 @@ with st.sidebar:
     #print('multiRegion: ', multiRegion)
 
     # contextual embedding
-    selected_contextualEmbedding = st.checkbox('Contextual Embedding', value=False)
-    contextualEmbedding = 'Enable' if selected_contextualEmbedding else 'Disable'
+    select_contextualEmbedding = st.checkbox('Contextual Embedding', value=False)
+    contextualEmbedding = 'Enable' if select_contextualEmbedding else 'Disable'
     #print('contextualEmbedding: ', contextualEmbedding)
 
     # chart checkbox 
