@@ -1450,12 +1450,12 @@ def get_answer_using_opensearch(text, st):
     filtered_docs = grade_documents(text, relevant_docs) # grading    
     filtered_docs = check_duplication(filtered_docs) # check duplication
 
+    if debug_mode == "Enable":
+        st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
+
     global reference_docs
     if len(filtered_docs):
         reference_docs += filtered_docs 
-
-    if debug_mode == "Enable":
-        st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
 
     # generate
     if debug_mode == "Enable":
