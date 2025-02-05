@@ -1077,6 +1077,9 @@ def get_summary_of_uploaded_file(file_name, st):
             st.info(status)
 
         image_summary = summary_image(img_base64, "")
+
+        if image_summary.find('<result>') != -1:
+            image_summary = image_summary[image_summary.find('<result>')+8:image_summary.find('</result>')] # remove <result> tag        
         print('image summary: ', image_summary)
             
         if len(extracted_text) > 10:
@@ -1753,7 +1756,7 @@ def run_agent_executor(query, st):
                 "당신의 이름은 서연이고, 질문에 친근한 방식으로 대답하도록 설계된 대화형 AI입니다."
                 "상황에 맞는 구체적인 세부 정보를 충분히 제공합니다."
                 "모르는 질문을 받으면 솔직히 모른다고 말합니다."
-                "한국어로 답변합니다."
+                "한국어로 답변하세요."
             )
         else: 
             system = (            
@@ -3554,3 +3557,79 @@ def translate_text(text, model_name):
         msg = msg[msg.find('<article>')+9:msg.find('</article>')] # remove <article> tag
 
     return msg
+
+####################### LangChain #######################
+# Image Summarization
+#########################################################
+
+def get_image_summarization(object_name, prompt, st):
+    # load image
+    s3_client = boto3.client(
+        service_name='s3',
+        region_name=bedrock_region
+    )
+
+    if debug_mode=="Enable":
+        status = "이미지를 가져옵니다."
+        print('status: ', status)
+        st.info(status)
+                
+    image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+object_name)
+    # print('image_obj: ', image_obj)
+    
+    image_content = image_obj['Body'].read()
+    img = Image.open(BytesIO(image_content))
+    
+    width, height = img.size 
+    print(f"width: {width}, height: {height}, size: {width*height}")
+    
+    isResized = False
+    while(width*height > 5242880):                    
+        width = int(width/2)
+        height = int(height/2)
+        isResized = True
+        print(f"width: {width}, height: {height}, size: {width*height}")
+    
+    if isResized:
+        img = img.resize((width, height))
+    
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    # extract text from the image
+    if debug_mode=="Enable":
+        status = "이미지에서 텍스트를 추출합니다."
+        print('status: ', status)
+        st.info(status)
+
+    text = extract_text(img_base64)
+    print('extracted text: ', text)
+
+    if text.find('<result>') != -1:
+        extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
+        # print('extracted_text: ', extracted_text)
+    else:
+        extracted_text = text
+    
+    if debug_mode=="Enable":
+        status = f"### 추출된 텍스트\n\n{extracted_text}"
+        print('status: ', status)
+        st.info(status)
+    
+    if debug_mode=="Enable":
+        status = "이미지의 내용을 분석합니다."
+        print('status: ', status)
+        st.info(status)
+
+    image_summary = summary_image(img_base64, prompt)
+    print('image summary: ', image_summary)
+        
+    if len(extracted_text) > 10:
+        contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
+    else:
+        contents = f"## 이미지 분석\n\n{image_summary}"
+    print('image contents: ', contents)
+
+    return contents
+

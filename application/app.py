@@ -32,6 +32,9 @@ mode_descriptions = {
     ],
     "번역하기": [
         "한국어와 영어에 대한 번역을 제공합니다. 한국어로 입력하면 영어로, 영어로 입력하면 한국어로 번역합니다."        
+    ],
+    "이미지 분석": [
+        "이미지를 업로드하면 이미지의 내용을 요약할 수 있습니다."
     ]
 }
 
@@ -50,17 +53,31 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기"], index=0
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기", "이미지 분석"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
 
     # model selection box
+    if mode == '이미지 분석':
+        index = 2
+    else:
+        index = 0   
     modelName = st.selectbox(
         '🖊️ 사용 모델을 선택하세요',
-        ('Nova Pro', 'Nova Lite', 'Claude 3.5 Sonnet', 'Claude 3.0 Sonnet', 'Claude 3.5 Haiku')
+        ('Nova Pro', 'Nova Lite', 'Claude 3.5 Sonnet', 'Claude 3.0 Sonnet', 'Claude 3.5 Haiku'), index=index
     )
     
+    uploaded_file = None
+    st.subheader("📋 문서 업로드")
+    if mode=='이미지 분석':
+        st.subheader("🌇 이미지 업로드")
+        uploaded_file = st.file_uploader("이미지 요약을 위한 파일을 선택합니다.", type=["png", "jpg", "jpeg"])
+
+    elif mode=='RAG' or mode=="Agentic RAG" or mode=="Corrective RAG" or mode=="Self RAG" or mode=="Self Corrective RAG":
+        print('fileId: ', chat.fileId)
+        uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
+
     # debug checkbox
     select_debugMode = st.checkbox('Debug Mode', value=True)
     debugMode = 'Enable' if select_debugMode else 'Disable'
@@ -83,10 +100,7 @@ with st.sidebar:
 
     chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
 
-    st.subheader("📋 문서 업로드")
-    print('fileId: ', chat.fileId)
-    uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
-
+    
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
     # print('clear_button: ', clear_button)
@@ -96,46 +110,13 @@ st.title('🔮 '+ mode)
 if clear_button==True:
     chat.initiate()
 
-# Preview the uploaded image in the sidebar
-file_name = ""
-if uploaded_file is not None and clear_button==False:
-    if uploaded_file.name:      
-        chat.initiate()
-
-        if debugMode=='Enable':
-            status = '선택한 파일을 업로드합니다.'
-            print('status: ', status)
-            st.info(status)
-
-        file_name = uploaded_file.name
-        file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
-        print('file_url: ', file_url) 
-            
-        status = f'선택한 "{file_name}"의 내용을 요약합니다.'
-        # my_bar = st.sidebar.progress(0, text=status)
-        
-        # for percent_complete in range(100):
-        #     time.sleep(0.2)
-        #     my_bar.progress(percent_complete + 1, text=status)
-        if debugMode=='Enable':
-            print('status: ', status)
-            st.info(status)
-    
-        msg = chat.get_summary_of_uploaded_file(file_name, st)
-        st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
-        print('msg: ', msg)
-        st.rerun()
-
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.greetings = False
 
 # Display chat messages from history on app rerun
-def display_chat_messages() -> None:
-    """Print message history
-    @returns None
-    """
+def display_chat_messages():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -192,6 +173,42 @@ if chart == 'Enable':
         col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
         url = "https://raw.githubusercontent.com/kyopark2014/agentic-workflow/main/contents/planning.png"
         col2.image(url)
+
+# Preview the uploaded image in the sidebar
+file_name = ""
+if uploaded_file and clear_button==False and not mode == '이미지 분석':
+    if uploaded_file.name:      
+        chat.initiate()
+
+        if debugMode=='Enable':
+            status = '선택한 파일을 업로드합니다.'
+            print('status: ', status)
+            st.info(status)
+
+        file_name = uploaded_file.name
+        file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+        print('file_url: ', file_url) 
+            
+        status = f'선택한 "{file_name}"의 내용을 요약합니다.'
+        # my_bar = st.sidebar.progress(0, text=status)
+        
+        # for percent_complete in range(100):
+        #     time.sleep(0.2)
+        #     my_bar.progress(percent_complete + 1, text=status)
+        if debugMode=='Enable':
+            print('status: ', status)
+            st.info(status)
+    
+        msg = chat.get_summary_of_uploaded_file(file_name, st)
+        st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
+        print('msg: ', msg)
+        st.rerun()
+if uploaded_file and clear_button==False and mode == '이미지 분석':
+    st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
+
+    file_name = uploaded_file.name
+    image_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+    print('image_url: ', image_url)
 
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
@@ -339,6 +356,19 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             st.write(response)
 
             st.session_state.messages.append({"role": "assistant", "content": response})
+
+        elif mode == '이미지 분석':
+            if uploaded_file is None or uploaded_file == "":
+                st.error("파일을 먼저 업로드하세요.")
+                st.stop()
+
+            else:
+                with st.status("thinking...", expanded=True, state="running") as status:
+                    summary = chat.get_image_summarization(file_name, prompt, st)
+                    st.write(summary)
+
+                    st.session_state.messages.append({"role": "assistant", "content": summary})
+                    # st.rerun()
 
         else:
             stream = chat.general_conversation(prompt)
