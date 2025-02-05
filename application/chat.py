@@ -1453,9 +1453,9 @@ def get_answer_using_opensearch(text, st):
     if debug_mode == "Enable":
         st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
 
-    global reference_docs
-    if len(filtered_docs):
-        reference_docs += filtered_docs 
+    #global reference_docs
+    #if len(filtered_docs):
+    #    reference_docs += filtered_docs 
 
     # generate
     if debug_mode == "Enable":
@@ -1487,10 +1487,12 @@ def get_answer_using_opensearch(text, st):
         raise Exception ("Not able to request to LLM")
     
     reference = ""
-    if reference_docs:
-        reference = get_references(reference_docs)
+    #if reference_docs:
+    #    reference = get_references(reference_docs)
+    if filtered_docs:
+        reference = get_references(filtered_docs)
 
-    return msg+reference, reference_docs
+    return msg+reference, filtered_docs
 
 ####################### LangGraph #######################
 # Agentic RAG
