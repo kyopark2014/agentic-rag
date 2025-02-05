@@ -29,6 +29,9 @@ mode_descriptions = {
     ],
     "Agent (Planning)": [
         "Planning Workflow를 수행하는 Agent 구현합니다."
+    ],
+    "번역하기": [
+        "한국어와 영어에 대한 번역을 제공합니다. 한국어로 입력하면 영어로, 영어로 입력하면 한국어로 번역합니다."        
     ]
 }
 
@@ -47,7 +50,7 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)"], index=0
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
@@ -330,6 +333,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 chat.save_chat_history(prompt, response)
             
             show_references(reference_docs) 
+        
+        elif mode == '번역하기':
+            response = chat.translate_text(prompt, modelName)
+            st.write(response)
+
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
         else:
             stream = chat.general_conversation(prompt)

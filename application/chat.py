@@ -1452,11 +1452,7 @@ def get_answer_using_opensearch(text, st):
 
     if debug_mode == "Enable":
         st.info(f"{len(filtered_docs)}개의 문서가 선택되었습니다.")
-
-    #global reference_docs
-    #if len(filtered_docs):
-    #    reference_docs += filtered_docs 
-
+    
     # generate
     if debug_mode == "Enable":
         st.info(f"결과를 생성중입니다.")
@@ -1487,11 +1483,9 @@ def get_answer_using_opensearch(text, st):
         raise Exception ("Not able to request to LLM")
     
     reference = ""
-    #if reference_docs:
-    #    reference = get_references(reference_docs)
     if filtered_docs:
         reference = get_references(filtered_docs)
-
+    
     return msg+reference, filtered_docs
 
 ####################### LangGraph #######################
@@ -1759,6 +1753,7 @@ def run_agent_executor(query, st):
                 "당신의 이름은 서연이고, 질문에 친근한 방식으로 대답하도록 설계된 대화형 AI입니다."
                 "상황에 맞는 구체적인 세부 정보를 충분히 제공합니다."
                 "모르는 질문을 받으면 솔직히 모른다고 말합니다."
+                "한국어로 답변합니다."
             )
         else: 
             system = (            
@@ -3511,3 +3506,51 @@ def run_planning(query, st):
         reference = get_references(reference_docs)
     
     return value["answer"]+reference, reference_docs
+
+####################### LangChain #######################
+# Translation (English)
+#########################################################
+
+def translate_text(text, model_name):
+    global llmMode
+    llmMode = model_name
+
+    chat = get_chat()
+
+    system = (
+        "You are a helpful assistant that translates {input_language} to {output_language} in <article> tags. Put it in <result> tags."
+    )
+    human = "<article>{text}</article>"
+    
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+    # print('prompt: ', prompt)
+    
+    if isKorean(text)==False :
+        input_language = "English"
+        output_language = "Korean"
+    else:
+        input_language = "Korean"
+        output_language = "English"
+                        
+    chain = prompt | chat    
+    try: 
+        result = chain.invoke(
+            {
+                "input_language": input_language,
+                "output_language": output_language,
+                "text": text,
+            }
+        )
+        msg = result.content
+        print('translated text: ', msg)
+    except Exception:
+        err_msg = traceback.format_exc()
+        print('error message: ', err_msg)                    
+        raise Exception ("Not able to request to LLM")
+
+    if msg.find('<result>') != -1:
+        msg = msg[msg.find('<result>')+8:msg.find('</result>')] # remove <result> tag
+    if msg.find('<article>') != -1:
+        msg = msg[msg.find('<article>')+9:msg.find('</article>')] # remove <article> tag
+
+    return msg
