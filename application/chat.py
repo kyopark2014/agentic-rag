@@ -1096,6 +1096,69 @@ def get_summary_of_uploaded_file(file_name, st):
 
     return msg
 
+def revise_question(query, st):    
+    print("###### revise_question ######")
+
+    chat = get_chat()
+    st.info("히스토리를 이용해 질문을 변경합니다.")
+        
+    if isKorean(query)==True :      
+        human = (
+            "이전 대화를 참조하여, 다음의 <question>의 뜻을 명확히 하는 새로운 질문을 한국어로 생성하세요." 
+            "새로운 질문은 원래 질문의 중요한 단어를 반드시 포함합니다." 
+            "결과는 <result> tag를 붙여주세요."
+        
+            "<question>"
+            "{question}"
+            "</question>"
+        )
+        
+    else: 
+        human = (
+            "Rephrase the follow up <question> to be a standalone question." 
+            "Put it in <result> tags."
+
+            "<question>"
+            "{question}"
+            "</question>"
+        )
+            
+    prompt = ChatPromptTemplate.from_messages([
+        MessagesPlaceholder(variable_name="history"), 
+        ("human", human)]
+    )
+    # print('prompt: ', prompt)
+    
+    history = memory_chain.load_memory_variables({})["chat_history"]
+    print('history: ', history)
+
+    if not len(history):        
+        print('no history')
+        st.info("이전 히스트로가 없어서 질문을 그대로 전달합니다.")
+        return query
+                
+    chain = prompt | chat    
+    try: 
+        result = chain.invoke(
+            {
+                "history": history,
+                "question": query,
+            }
+        )
+        generated_question = result.content
+        
+        revised_question = generated_question[generated_question.find('<result>')+8:len(generated_question)-9] # remove <result> tag                   
+        # print('revised_question: ', revised_question)
+
+        st.info(f"수정된 질문: {revised_question}")
+        
+    except Exception:
+        err_msg = traceback.format_exc()
+        print('error message: ', err_msg)        
+        raise Exception ("Not able to request to LLM")
+            
+    return revised_question    
+
 ####################### LangChain #######################
 # General Conversation
 #########################################################
@@ -1867,7 +1930,6 @@ def run_agent_executor(query, st):
     msg = extract_thinking_tag(msg, st)
     
     return msg+reference, reference_docs
-
 
 ####################### LangGraph #######################
 # Corrective RAG

@@ -15,6 +15,9 @@ mode_descriptions = {
     "Agentic RAG": [
         "Agent를 이용해 RAG의 성능을 향상시킵니다."
     ],
+    "Agentic RAG (Chat)": [
+        "Agent를 이용해 RAG의 성능을 향상시킵니다. 이전 채팅 히스토리를 반영한 대화가 가능합니다."
+    ],
     "Corrective RAG": [
         "Corrective RAG를 활용하여 RAG의 성능을 향상 시킵니다."
     ],
@@ -53,7 +56,7 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기", "이미지 분석"], index=0
+        label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Agentic RAG (Chat)", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기", "이미지 분석"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
@@ -244,6 +247,21 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_agent_executor(prompt, st)
+                st.write(response)
+                print('response: ', response)
+                
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                if debugMode != "Enable":
+                    st.rerun()
+
+                chat.save_chat_history(prompt, response)
+            
+            show_references(reference_docs) 
+        
+        elif mode == 'Agentic RAG (Chat)':
+            with st.status("thinking...", expanded=True, state="running") as status:
+                revise_prompt = chat.revise_question(prompt, st)
+                response, reference_docs = chat.run_agent_executor(revise_prompt, st)
                 st.write(response)
                 print('response: ', response)
                 
