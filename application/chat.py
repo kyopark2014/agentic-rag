@@ -11,6 +11,7 @@ import base64
 import csv
 import info # user defined info such as models
 import operator
+import yfinance as yf
 
 from io import BytesIO
 from PIL import Image
@@ -1767,7 +1768,47 @@ def search_by_tavily(keyword: str) -> str:
                      
     return answer
 
-tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch]        
+@tool
+def stock_data_lookup(ticker, country):
+    """
+    Retrieve accurate stock trends for a given ticker.
+    ticker: the ticker to retrieve price history for
+    country: the english country name of the stock
+    return: the information of ticker
+    """ 
+    com = re.compile('[a-zA-Z]') 
+    alphabet = com.findall(ticker)
+    print('alphabet: ', alphabet)
+
+    print("country:", country)
+
+    if len(alphabet)==0:
+        if country == "South Korea":
+            ticker += ".KS"
+        elif country == "Japan":
+            ticker += ".T"
+    print("ticker:", ticker)
+    
+    stock = yf.Ticker(ticker)
+    
+    # get the price history for past 1 month
+    history = stock.history(period="1mo")
+    print('history: ', history)
+    
+    result = f"## Trading History\n{history}"
+    #history.reset_index().to_json(orient="split", index=False, date_format="iso")    
+    
+    result += f"\n\n## Financials\n{stock.financials}"    
+    print('financials: ', stock.financials)
+
+    result += f"\n\n## Major Holders\n{stock.major_holders}"
+    print('major_holders: ', stock.major_holders)
+
+    print('result: ', result)
+
+    return result
+
+tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup]        
 
 def run_agent_executor(query, st):
     chatModel = get_chat()     
