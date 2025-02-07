@@ -9,3 +9,5 @@
 ```text
 pip install yfinance
 ```
+
+네이버와 같은 한국회사들은 "KS"를 접미어로 사용하고, 일본은 "T"입니다.
