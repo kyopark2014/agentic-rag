@@ -590,7 +590,8 @@ EOF'`,
       `json='${JSON.stringify(environment)}' && echo "$json">/home/config.json`,
       `runuser -l ec2-user -c 'cd && git clone https://github.com/kyopark2014/${projectName}'`,
       `runuser -l ec2-user -c 'pip install streamlit streamlit_chat beautifulsoup4 pytz tavily-python'`,        
-      `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community langgraph opensearch-py PyPDF2'`,
+      `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community'`,
+      `runuser -l ec2-user -c 'pip install langgraph opensearch-py PyPDF2 yfinance'`,      
       'systemctl enable streamlit.service',
       'systemctl start streamlit'
     ];    
