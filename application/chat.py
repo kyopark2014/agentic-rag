@@ -3106,7 +3106,7 @@ def run_reflection(query, st):
     def reflect(state: State, config):
         print("###### reflect ######")
         logger.info(f"###### reflect ######")
-        logger.info(f"draft: {state["draft"]}")
+        logger.info(f"draft: {state['draft']}")
 
         draft = state["draft"]
         
@@ -3319,7 +3319,7 @@ def run_planning(query, st):
 
     def plan_node(state: State, config):
         logger.info(f"###### plan ######")
-        logger.info(f"input: {state["input"]}")
+        logger.info(f"input: {state['input']}")
 
         if debug_mode=="Enable":
             st.info(f"계획을 생성합니다. 요청사항: {state['input']}")
@@ -3419,7 +3419,7 @@ def run_planning(query, st):
 
     def execute_node(state: State, config):
         logger.info(f"###### execute ######")
-        logger.info(f"input: {state["input"]}")
+        logger.info(f"input: {state['input']}")
         plan = state["plan"]
         logger.info(f"plan: {plan}")
         
@@ -3473,7 +3473,7 @@ def run_planning(query, st):
         logger.info(f"state of replan node: {state}")
 
         if len(state["plan"]) == 1:
-            logger.info(f"plan: {state["plan"]}")
+            logger.info(f"plan: {state['plan']}")
             return {"response":state["info"][-1]}
         
         if debug_mode=="Enable":
@@ -3544,10 +3544,10 @@ def run_planning(query, st):
         # print('state: ', state)
         
         if "response" in state and state["response"]:
-            logger.info(f"response: {state["response"]}")       
+            logger.info(f"response: {state['response']}")       
             next = "end"
         else:
-            logger.info(f"plan: {state["plan"]}")
+            logger.info(f"plan: {state['plan']}")
             next = "continue"
         logger.info(f"should_end response: {next}")
         
