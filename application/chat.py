@@ -12,6 +12,8 @@ import csv
 import info # user defined info such as models
 import operator
 import yfinance as yf
+import logging
+import sys
 
 from io import BytesIO
 from PIL import Image
@@ -42,10 +44,65 @@ from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+#logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+#formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(levelname)s | %(message)s')
+#formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(message)s')
+formatter = logging.Formatter('%(message)s')
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.INFO)
+stdout_handler.setFormatter(formatter)
+
+enableLoggerChat = False
+print('enableLoggerChat: ', enableLoggerChat)
+
+enableLoggerApp = False
+def get_logger_state():
+    global enableLoggerApp
+    if not enableLoggerApp:
+        enableLoggerApp = True
+    return enableLoggerApp
+
+userId = "demo"
+map_chain = dict() 
+
+def initiate():
+    global userId
+    global memory_chain
+    
+    userId = uuid.uuid4().hex
+    print('userId: ', userId)
+
+    if userId in map_chain:  
+            # print('memory exist. reuse it!')
+            memory_chain = map_chain[userId]
+    else: 
+        # print('memory does not exist. create new one!')        
+        memory_chain = ConversationBufferWindowMemory(memory_key="chat_history", output_key='answer', return_messages=True, k=5)
+        map_chain[userId] = memory_chain
+
+initiate()
+
 try:
     with open("/home/config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
         print('config: ', config)
+
+        if not enableLoggerChat:
+            logger.addHandler(stdout_handler)        
+            
+            file_handler = logging.FileHandler('/var/log/application/logs.log')
+            file_handler.setLevel(logging.INFO)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            logger.info("Ready to write log (chat)!")
+
+            enableLoggerChat = True
+            print('enableLoggerChat: ', enableLoggerChat)
+            
 except Exception:
     print("use local configuration")
     with open("application/config.json", "r", encoding="utf-8") as f:
@@ -84,9 +141,6 @@ grade_state = "LLM" # LLM, PRIORITY_SEARCH, OTHERS
 
 doc_prefix = s3_prefix+'/'
 useEnhancedSearch = False
-
-userId = "demo"
-map_chain = dict() 
 
 # RAG
 index_name = projectName
@@ -144,23 +198,6 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding):
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding
         print('contextual_embedding: ', contextual_embedding)
-
-def initiate():
-    global userId
-    global memory_chain
-    
-    userId = uuid.uuid4().hex
-    print('userId: ', userId)
-
-    if userId in map_chain:  
-            # print('memory exist. reuse it!')
-            memory_chain = map_chain[userId]
-    else: 
-        # print('memory does not exist. create new one!')        
-        memory_chain = ConversationBufferWindowMemory(memory_key="chat_history", output_key='answer', return_messages=True, k=5)
-        map_chain[userId] = memory_chain
-
-initiate()
 
 def clear_chat_history():
     memory_chain = []

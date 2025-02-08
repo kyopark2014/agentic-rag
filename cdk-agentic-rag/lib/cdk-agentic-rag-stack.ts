@@ -313,7 +313,8 @@ export class CdkAgenticRagStack extends cdk.Stack {
       assumedBy: new iam.CompositePrincipal(
         new iam.ServicePrincipal("ec2.amazonaws.com"),
         new iam.ServicePrincipal("bedrock.amazonaws.com"),
-      )
+      ),
+      managedPolicies: [cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy')] 
     });
 
     const secreatManagerPolicy = new iam.PolicyStatement({  
@@ -593,7 +594,9 @@ EOF'`,
       `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community'`,
       `runuser -l ec2-user -c 'pip install langgraph opensearch-py PyPDF2 yfinance'`,      
       'systemctl enable streamlit.service',
-      'systemctl start streamlit'
+      'systemctl start streamlit',
+      `yum install -y amazon-cloudwatch-agent`,
+      `mkdir /var/log/application/ && chown ec2-user /var/log/application && chgrp ec2-user /var/log/application`,
     ];    
     userData.addCommands(...commands);
 
