@@ -123,6 +123,102 @@ AWS Credential을 입력합니다.
 
 ## 실행환경 (선택)
 
+### CloudWatch Log 활용하기
+
+Streamlit이 설치된 EC2에 접속해서 아래 명령어로 config를 생성합니다.
+
+```text
+cat << EOF > /tmp/config.json
+{
+    "agent":{
+        "metrics_collection_interval":60,
+        "debug":false
+    },
+    "metrics": {
+        "namespace": "CloudWatch/StreamlitServerMetrics",
+        "metrics_collected":{
+          "cpu":{
+             "resources":[
+                "*"
+             ],
+             "measurement":[
+                {
+                   "name":"cpu_usage_idle",
+                   "rename":"CPU_USAGE_IDLE",
+                   "unit":"Percent"
+                },
+                {
+                   "name":"cpu_usage_nice",
+                   "unit":"Percent"
+                },
+                "cpu_usage_guest"
+             ],
+             "totalcpu":false,
+             "metrics_collection_interval":10
+          },
+          "mem":{
+             "measurement":[
+                "mem_used",
+                "mem_cached",
+                "mem_total"
+             ],
+             "metrics_collection_interval":1
+          },          
+          "processes":{
+             "measurement":[
+                "running",
+                "sleeping",
+                "dead"
+             ]
+          }
+       },
+        "append_dimensions":{
+            "InstanceId":"\${aws:InstanceId}",
+            "ImageId":"\${aws:ImageId}",
+            "InstanceType":"\${aws:InstanceType}",
+            "AutoScalingGroupName":"\${aws:AutoScalingGroupName}"
+        }
+    },
+    "logs":{
+       "logs_collected":{
+          "files":{
+             "collect_list":[
+                {
+                   "file_path":"/var/log/application/logs.log",
+                   "log_group_name":"agentic-rag.log",
+                   "log_stream_name":"agentic-rag.log",
+                   "timezone":"UTC"
+                }
+             ]
+          }
+       }
+    }
+}
+EOF
+```
+
+이후 아래 명령어로 amazon-cloudwatch-agent의 환경을 업데이트하면 자동으로 실행이 됩니다.
+
+```text
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/tmp/config.json
+```
+
+만약 정상적으로 동작하지 않는다면 아래 명령어로 상태를 확인합니다. 
+
+```text
+amazon-cloudwatch-agent-ctl -m ec2 -a status
+systemctl status amazon-cloudwatch-agent
+ps -ef|grep amazon-cloudwatch-agent
+```
+
+문제 발생시 로그 확인하는 방법입니다.
+
+```text
+cat /opt/aws/amazon-cloudwatch-agent/logs/configuration-validation.log
+cat /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+```
+
+
 ### Local에서 실행하기 
 
 Output의 environmentforbedrockagent의 내용을 복사하여 [config.json](./application/config.json)을 업데이트 합니다. 이미 "aws configure"가 설정되어 있어야합니다.
