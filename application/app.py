@@ -130,7 +130,6 @@ with st.sidebar:
     #print('chart: ', chart)
 
     chat.update(modelName, debugMode, multiRegion, contextualEmbedding)
-
     
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
