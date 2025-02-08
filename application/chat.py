@@ -48,7 +48,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 #formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(levelname)s | %(message)s')
-#formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(message)s')
+formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(message)s')
 formatter = logging.Formatter('%(message)s')
 
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -82,6 +82,9 @@ def initiate():
         # print('memory does not exist. create new one!')        
         memory_chain = ConversationBufferWindowMemory(memory_key="chat_history", output_key='answer', return_messages=True, k=5)
         map_chain[userId] = memory_chain
+
+    if not enableLoggerChat:
+        logger.addHandler(stdout_handler)        
 
 initiate()
 
@@ -1862,13 +1865,11 @@ def run_agent_executor(query, st):
     def should_continue(state: State) -> Literal["continue", "end"]:
         logger.info(f"###### should_continue ######")
 
-        print('state: ', state)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"state: {state}")
         messages = state["messages"]    
 
         last_message = messages[-1]
-        print('last_message: ', last_message)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"last_message: {last_message}")
         
         # print('last_message: ', last_message)
         
@@ -1877,31 +1878,25 @@ def run_agent_executor(query, st):
         # else:                
         #     return "continue"
         if isinstance(last_message, ToolMessage) or last_message.tool_calls:
-            print(f"tool_calls: ", last_message.tool_calls)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"tool_calls: {last_message.tool_calls}")
 
             for message in last_message.tool_calls:
-                print(f"tool name: {message['name']}, args: {message['args']}")
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"tool name: {message['name']}, args: {message['args']}")
                 # update_state_message(f"calling... {message['name']}", config)
 
-            print(f"--- CONTINUE: {last_message.tool_calls[-1]['name']} ---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"--- CONTINUE: {last_message.tool_calls[-1]['name']} ---")
             return "continue"
         
         #if not last_message.tool_calls:
         else:
-            print("Final: ", last_message.content)
-            logger.info(f"prepare: {prepare}")
-            print("--- END ---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"Final: {last_message.content}")
+            logger.info(f"--- END ---")
             return "end"
            
     def call_model(state: State, config):
         print("###### call_model ######")
-        logger.info(f"prepare: {prepare}")
-        print('state: ', state["messages"])
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### call_model ######")
+        logger.info(f"state: {state["messages"]}")
                 
         if isKorean(state["messages"][0].content)==True:
             system = (
@@ -1917,8 +1912,7 @@ def run_agent_executor(query, st):
             )
 
         for attempt in range(3):   
-            print('attempt: ', attempt)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"attempt: {attempt}")
             try:
                 prompt = ChatPromptTemplate.from_messages(
                     [
@@ -1929,48 +1923,41 @@ def run_agent_executor(query, st):
                 chain = prompt | model
                     
                 response = chain.invoke(state["messages"])
-                print('call_model response: ', response)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"all_model response: {response}")
 
                 if isinstance(response.content, list):            
                     for re in response.content:
                         if "type" in re:
                             if re['type'] == 'text':
-                                print(f"--> {re['type']}: {re['text']}")
-                                logger.info(f"prepare: {prepare}")
+                                logger.info(f"--> {re['type']}: {re['text']}")
 
                                 status = re['text']
-                                print('status: ',status)
-                                logger.info(f"prepare: {prepare}")
+                                logger.info(f"status: {status}")
                                 
                                 status = status.replace('`','')
                                 status = status.replace('\"','')
                                 status = status.replace("\'",'')
                                 
-                                print('status: ',status)
-                                logger.info(f"prepare: {prepare}")
+                                logger.info(f"status: {status}")
                                 if status.find('<thinking>') != -1:
-                                    print('Remove <thinking> tag.')
-                                    logger.info(f"prepare: {prepare}")
+                                    logger.info(f"Remove <thinking> tag.")
                                     status = status[status.find('<thinking>')+11:status.find('</thinking>')]
-                                    print('status without tag: ', status)
-                                    logger.info(f"prepare: {prepare}")
+                                    logger.info(f"tatus without tag: {status}")
 
                                 if debug_mode=="Enable":
                                     st.info(status)
                                 
                             elif re['type'] == 'tool_use':                
-                                print(f"--> {re['type']}: {re['name']}, {re['input']}")
-                                logger.info(f"prepare: {prepare}")
+                                logger.info(f"--> {re['type']}: {re['name']}, {re['input']}")
 
                                 if debug_mode=="Enable":
                                     st.info(f"{re['type']}: {re['name']}, {re['input']}")
                             else:
                                 print(re)
-                                logger.info(f"prepare: {prepare}")
+                                logger.info(f"{re}")
                         else: # answer
                             print(response.content)
-                            logger.info(f"prepare: {prepare}")
+                            logger.info(f"{response.content}")
                 break
             except Exception:
                 response = AIMessage(content="답변을 찾지 못하였습니다.")
@@ -2017,12 +2004,10 @@ def run_agent_executor(query, st):
     #print("result: ", result)
 
     msg = result["messages"][-1].content
-    print("msg: ", msg)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"msg: {msg}")
 
     for i, doc in enumerate(reference_docs):
-        print(f"--> reference {i}: {doc}")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"--> reference {i}: {doc}")
         
     reference = ""
     if reference_docs:
@@ -2046,8 +2031,7 @@ def get_rewrite():
     chat = get_chat()
     structured_llm_rewriter = chat.with_structured_output(RewriteQuestion)
     
-    print('isKorPrompt: ', isKorPrompt)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"isKorPrompt: {isKorPrompt}")
     
     if isKorPrompt:
         system = """당신은 질문 re-writer입니다. 사용자의 의도와 의미을 잘 표현할 수 있도록 질문을 한국어로 re-write하세요."""
@@ -2057,8 +2041,7 @@ def get_rewrite():
             "for web search. Look at the input and try to reason about the underlying semantic intent / meaning."
         )
         
-    print('system: ', system)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"system: {system}")
         
     re_write_prompt = ChatPromptTemplate.from_messages(
         [
@@ -2084,13 +2067,11 @@ def web_search(question):
     try: 
         output = search.invoke(question)
         if output[:9] == "HTTPError":
-            print('output: ', output)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"output: {output}")
             raise Exception ("Not able to request to tavily")
         else:
             for result in output:
-                print('result: ', result)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"result: {result}")
 
                 if result:
                     content = result.get("content")
@@ -2146,8 +2127,7 @@ def run_corrective_rag(query, st):
         documents : List[str]
 
     def retrieve_node(state: State):
-        print("###### retrieve ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"p###### retrieve ######")
         question = state["question"]
 
         if debug_mode=="Enable":
@@ -2157,8 +2137,7 @@ def run_corrective_rag(query, st):
         return {"documents": docs, "question": question}
 
     def grade_documents_node(state: State, config):
-        print("###### grade_documents ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### grade_documents ######")
         question = state["question"]
         documents = state["documents"]
         
@@ -2167,10 +2146,8 @@ def run_corrective_rag(query, st):
         
         # Score each doc
         filtered_docs = []
-        print("start grading...")
-        logger.info(f"prepare: {prepare}")
-        print("grade_state: ", grade_state)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"start grading...")
+        logger.info(f"grade_state: ", grade_state)
         
         web_search = "No"
         
@@ -2189,21 +2166,17 @@ def run_corrective_rag(query, st):
                     grade = score.binary_score
                     # Document relevant
                     if grade.lower() == "yes":
-                        print("---GRADE: DOCUMENT RELEVANT---")
-                        logger.info(f"prepare: {prepare}")
+                        logger.info(f"---GRADE: DOCUMENT RELEVANT---")
                         filtered_docs.append(doc)
                     # Document not relevant
                     else:
-                        print("---GRADE: DOCUMENT NOT RELEVANT---")
-                        logger.info(f"prepare: {prepare}")
+                        logger.info(f"---GRADE: DOCUMENT NOT RELEVANT---")
                         # We do not include the document in filtered_docs
                         # We set a flag to indicate that we want to run web search
                         web_search = "Yes"
                         continue
-            print('len(documents): ', len(filtered_docs))
-            logger.info(f"prepare: {prepare}")
-            print('web_search: ', web_search)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"len(documents): {len(filtered_docs)}")
+            logger.info(f"web_search: {web_search}")
             
         # elif grade_state == "PRIORITY_SEARCH":
         #     filtered_docs = priority_search(question, documents, minDocSimilarity)
@@ -2221,25 +2194,21 @@ def run_corrective_rag(query, st):
         return {"question": question, "documents": filtered_docs, "web_search": web_search}
 
     def decide_to_generate(state: State):
-        print("###### decide_to_generate ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### decide_to_generate ######")
         web_search = state["web_search"]
         
         if web_search == "Yes":
             # All documents have been filtered check_relevance
             # We will re-generate a new query
-            print("---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---")
             return "rewrite"
         else:
             # We have relevant documents, so generate answer
-            print("---DECISION: GENERATE---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATE---")
             return "generate"
 
     def generate_node(state: State, config):
-        print("###### generate ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### generate ######")
         question = state["question"]
         documents = state["documents"]
 
@@ -2260,8 +2229,7 @@ def run_corrective_rag(query, st):
                 "context": relevant_context
             }
         )
-        print('result: ', result)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"result: {result}")
 
         output = result.content
         if output.find('<result>')!=-1:
@@ -2274,8 +2242,7 @@ def run_corrective_rag(query, st):
         return {"generation": output}
 
     def rewrite_node(state: State, config):
-        print("###### rewrite ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### rewrite ######")
         question = state["question"]
         documents = state["documents"]
 
@@ -2286,14 +2253,12 @@ def run_corrective_rag(query, st):
         question_rewriter = get_rewrite()
         
         better_question = question_rewriter.invoke({"question": question})
-        print("better_question: ", better_question.question)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"better_question: {better_question.question}")
 
         return {"question": better_question.question, "documents": documents}
 
     def web_search_node(state: State, config):
-        print("###### web_search ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### web_search ######")
         question = state["question"]
         documents = state["documents"]
 
@@ -2355,8 +2320,7 @@ def run_corrective_rag(query, st):
     
     for output in app.stream(inputs, config):   
         for key, value in output.items():
-            print(f"Finished running: {key}")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"Finished running: {key}")
             # print("value: ", value)
             
     #print('value: ', value)
@@ -2409,10 +2373,8 @@ def run_self_rag(query, st):
         documents : List[str]
     
     def retrieve_node(state: State, config):
-        print('state: ', state)
-        logger.info(f"prepare: {prepare}")
-        print("###### retrieve ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"state: {state}")
+        logger.info(f"###### retrieve ######")
         question = state["question"]
 
         if debug_mode=="Enable":
@@ -2422,8 +2384,7 @@ def run_self_rag(query, st):
         return {"documents": docs, "question": question}
     
     def generate_node(state: State, config):
-        print("###### generate ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### generate ######")
         question = state["question"]
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
@@ -2445,8 +2406,7 @@ def run_self_rag(query, st):
                 "context": relevant_context                
             }
         )
-        print('result: ', result)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"result: {result}")
 
         output = result.content
         if output.find('<result>')!=-1:
@@ -2463,10 +2423,8 @@ def run_self_rag(query, st):
         if debug_mode=="Enable":
             st.info(f"가져온 {len(documents)}개의 문서를 평가하고 있습니다.")    
         
-        print("start grading...")
-        logger.info(f"prepare: {prepare}")
-        print("grade_state: ", grade_state)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"start grading...")
+        logger.info(f"grade_state: {grade_state}")
         
         if grade_state == "LLM":
             if multi_region == 'Enable':  # parallel processing            
@@ -2482,18 +2440,15 @@ def run_self_rag(query, st):
                     grade = score.binary_score
                     # Document relevant
                     if grade.lower() == "yes":
-                        print("---GRADE: DOCUMENT RELEVANT---")
-                        logger.info(f"prepare: {prepare}")
+                        logger.info(f"---GRADE: DOCUMENT RELEVANT---")
                         filtered_docs.append(doc)
                     # Document not relevant
                     else:
-                        print("---GRADE: DOCUMENT NOT RELEVANT---")
-                        logger.info(f"prepare: {prepare}")
+                        logger.info(f"---GRADE: DOCUMENT NOT RELEVANT---")
                         # We do not include the document in filtered_docs
                         # We set a flag to indicate that we want to run web search
                         continue
-            print('len(docments): ', len(filtered_docs))    
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"len(docments): {len(filtered_docs)}")
 
         # elif grade_state == "PRIORITY_SEARCH":
         #     filtered_docs = priority_search(question, documents, minDocSimilarity)
@@ -2511,30 +2466,25 @@ def run_self_rag(query, st):
         return {"question": question, "documents": filtered_docs, "count": count + 1}
 
     def decide_to_generate(state: State, config):
-        print("###### decide_to_generate ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### decide_to_generate ######")
         filtered_documents = state["documents"]
         
         count = state["count"] if state.get("count") is not None else -1
         max_count = config.get("configurable", {}).get("max_count", MAX_RETRIES)
-        print("count: ", count)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"count: {count}")
         
         if not filtered_documents:
             # All documents have been filtered check_relevance
             # We will re-generate a new query
-            print("---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION, INCLUDE WEB SEARCH---")
             return "no document" if count < max_count else "not available"
         else:
             # We have relevant documents, so generate answer
-            print("---DECISION: GENERATE---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATE---")
             return "document"
 
     def rewrite_node(state: State, config):
-        print("###### rewrite ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### rewrite ######")
         question = state["question"]
         documents = state["documents"]
 
@@ -2545,14 +2495,12 @@ def run_self_rag(query, st):
         question_rewriter = get_rewrite()
         
         better_question = question_rewriter.invoke({"question": question})
-        print("better_question: ", better_question.question)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"better_question: {better_question.question}")
 
         return {"question": better_question.question, "documents": documents}
 
     def grade_generation(state: State, config):
-        print("###### grade_generation ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### grade_generation ######")
         question = state["question"]
         documents = state["documents"]
         generation = state["generation"]
@@ -2562,8 +2510,7 @@ def run_self_rag(query, st):
         retries = state["retries"] if state.get("retries") is not None else -1
         max_retries = config.get("configurable", {}).get("max_retries", MAX_RETRIES)
 
-        print("len(documents): ", len(documents))
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"len(documents): {len(documents)}")
 
         if len(documents):
             # Check Hallucination
@@ -2574,8 +2521,7 @@ def run_self_rag(query, st):
 
             hallucination_grade = "no"
             for attempt in range(3):   
-                print('attempt: ', attempt)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"attempt: {attempt}")
                 try:
                     score = hallucination_grader.invoke(
                         {"documents": documents, "generation": generation}
@@ -2586,10 +2532,8 @@ def run_self_rag(query, st):
                     err_msg = traceback.format_exc()
                     logger.info(f"error message: {err_msg}")       
             
-            print("hallucination_grade: ", hallucination_grade)
-            logger.info(f"prepare: {prepare}")
-            print("retries: ", retries)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"hallucination_grade: {hallucination_grade}")
+            logger.info(f"retries: {retries}")
         else:
             hallucination_grade = "yes" # not hallucination
             if debug_mode=="Enable":
@@ -2600,28 +2544,24 @@ def run_self_rag(query, st):
             if debug_mode=="Enable" and len(documents):
                 st.info(f"환각이 아닙니다.")
 
-            print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
 
             # Check appropriate answer
             if debug_mode=="Enable":
                 st.info(f"적절한 답변인지 검토합니다.")
 
-            print("---GRADE GENERATION vs QUESTION---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---GRADE GENERATION vs QUESTION---")
             score = answer_grader.invoke({"question": question, "generation": generation})
             answer_grade = score.binary_score        
             # print("answer_grade: ", answer_grade)
 
             if answer_grade == "yes":
-                print("---DECISION: GENERATION ADDRESSES QUESTION---")
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"---DECISION: GENERATION ADDRESSES QUESTION---")
                 if debug_mode=="Enable":
                     st.info(f"적절한 답변입니다.")
                 return "useful" 
             else:
-                print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
                 if debug_mode=="Enable":
                     st.info(f"적절하지 않은 답변입니다.")
                 
@@ -2629,8 +2569,7 @@ def run_self_rag(query, st):
                 reference_docs = []
                 return "not useful" if retries < max_retries else "not available"
         else:
-            print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             if debug_mode=="Enable":
                 st.info(f"환각(halucination)입니다.")
             reference_docs = []
@@ -2687,8 +2626,7 @@ def run_self_rag(query, st):
     
     for output in app.stream(inputs, config):   
         for key, value in output.items():
-            print(f"Finished running: {key}")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"Finished running: {key}")
             # print("value: ", value)
             
     #print('value: ', value)
@@ -2712,8 +2650,7 @@ def run_self_corrective_rag(query, st):
         web_fallback: bool
 
     def retrieve_node(state: State, config):
-        print("###### retrieve ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### retrieve ######")
         question = state["question"]
         
         if debug_mode=="Enable":
@@ -2727,8 +2664,7 @@ def run_self_corrective_rag(query, st):
         return {"documents": docs, "question": question, "web_fallback": True}
 
     def generate_node(state: State, config):
-        print("###### generate ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### generate ######")
         question = state["question"]
         documents = state["documents"]
         retries = state["retries"] if state.get("retries") is not None else -1
@@ -2750,8 +2686,7 @@ def run_self_corrective_rag(query, st):
                 "context": relevant_context                
             }
         )
-        print('result: ', result)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"result: {result}")
 
         output = result.content
         if output.find('<result>')!=-1:
@@ -2763,8 +2698,7 @@ def run_self_corrective_rag(query, st):
         return {"retries": retries + 1, "candidate_answer": output}
 
     def rewrite_node(state: State, config):
-        print("###### rewrite ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### rewrite ######")
         question = state["question"]
         
         if debug_mode=="Enable":
@@ -2774,14 +2708,13 @@ def run_self_corrective_rag(query, st):
         question_rewriter = get_rewrite()
         
         better_question = question_rewriter.invoke({"question": question})
-        print("better_question: ", better_question.question)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"better_question: {better_question.question}")
 
         return {"question": better_question.question, "documents": []}
     
     def grade_generation(state: State, config):
         print("###### grade_generation ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### grade_generation ######")
         question = state["question"]
         documents = state["documents"]
         generation = state["candidate_answer"]
@@ -2795,22 +2728,19 @@ def run_self_corrective_rag(query, st):
         if not web_fallback:
             return "finalize_response"        
         
-        print("len(documents): ", len(documents))
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"len(documents):: {len(documents)}")
                 
         if len(documents):
             # Check hallucination
             if debug_mode=="Enable":
                 st.info(f"환각(hallucination)인지 검토합니다.")
 
-            print("---Hallucination?---")    
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---Hallucination?---")    
             hallucination_grader = get_hallucination_grader()
             hallucination_grade = "no"
 
             for attempt in range(3):   
-                print('attempt: ', attempt)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"attempt: {attempt}")
                 
                 try:        
                     score = hallucination_grader.invoke(
@@ -2827,8 +2757,7 @@ def run_self_corrective_rag(query, st):
                 st.info(f"검색된 문서가 없어서 환격(hallucination)은 테스트하지 않습니다.")            
 
         if hallucination_grade == "no":
-            print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS (Hallucination), RE-TRY---")
             if debug_mode=="Enable":
                 st.info(f"환각(halucination)입니다.")                        
             reference_docs = []
@@ -2837,10 +2766,8 @@ def run_self_corrective_rag(query, st):
         if debug_mode=="Enable" and len(documents):
             st.info(f"환각이 아닙니다.")
         
-        print("---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
-        logger.info(f"prepare: {prepare}")
-        print("---GRADE GENERATION vs QUESTION---")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"---DECISION: GENERATION IS GROUNDED IN DOCUMENTS---")
+        logger.info(f"---GRADE GENERATION vs QUESTION---")
 
         # Check appropriate answer
         if debug_mode=="Enable":
@@ -2849,13 +2776,11 @@ def run_self_corrective_rag(query, st):
         answer_grader = get_answer_grader()    
 
         for attempt in range(3):   
-            print('attempt: ', attempt)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"attempt: {attempt}")
             try: 
                 score = answer_grader.invoke({"question": question, "generation": generation})
                 answer_grade = score.binary_score     
-                print("answer_grade: ", answer_grade)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"answer_grade: {answer_grade}")
             
                 break
             except Exception:
@@ -2863,22 +2788,19 @@ def run_self_corrective_rag(query, st):
                 logger.info(f"error message: {err_msg}")   
             
         if answer_grade == "yes":
-            print("---DECISION: GENERATION ADDRESSES QUESTION---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATION ADDRESSES QUESTION---")
             if debug_mode=="Enable":
                 st.info(f"적절한 답변입니다.")
             return "finalize_response"
         else:
-            print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION (Not Answer)---")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"---DECISION: GENERATION DOES NOT ADDRESS QUESTION (Not Answer)---")
             if debug_mode=="Enable":
                 st.info(f"적절하지 않은 답변입니다.")            
             reference_docs = []
             return "rewrite" if retries < max_retries else "websearch"
 
     def web_search_node(state: State, config):
-        print("###### web_search ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### web_search ######")
         question = state["question"]
         # documents = state["documents"]
         documents = [] # initiate 
@@ -2897,8 +2819,7 @@ def run_self_corrective_rag(query, st):
         return {"question": question, "documents": documents}
 
     def finalize_response_node(state: State):
-        print("###### finalize_response ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### finalize_response ######")
         return {"messages": [AIMessage(content=state["candidate_answer"])]}
         
     def buildSelCorrectivefRAG():
@@ -2948,8 +2869,7 @@ def run_self_corrective_rag(query, st):
     
     for output in app.stream(inputs, config):   
         for key, value in output.items():
-            print(f"Finished running: {key}")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"Finished running: {key}")
             #print("value: ", value)
             
     #print('value: ', value)
@@ -3002,20 +2922,16 @@ def extract_reflection(draft):
                 structured_llm = chat.with_structured_output(Research, include_raw=True)
             
             info = structured_llm.invoke(draft)
-            print(f'attempt: {attempt}, info: {info}')
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"attempt: {attempt}, info: {info}")
                 
             if not info['parsed'] == None:
                 parsed_info = info['parsed']
-                print('parsed_info: ', parsed_info)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"parsed_info: {parsed_info}")
                 reflection = [parsed_info.reflection.missing, parsed_info.reflection.advisable]
                 search_queries = parsed_info.search_queries
                 
-                print('reflection: ', parsed_info.reflection) 
-                logger.info(f"prepare: {prepare}")           
-                print('search_queries: ', search_queries)      
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"reflection: {parsed_info.reflection}")           
+                logger.info(f"search_queries: {search_queries}")
 
         except Exception:
             err_msg = traceback.format_exc()
@@ -3046,15 +2962,13 @@ def extract_reflection2(draft):
             result = chain.invoke({
                 "draft": draft
             })
-            print("result: ", result)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"result: {result}")
 
             output = result.content
 
             if output.find('<result>') != -1:
                 output = output[output.find('<result>')+8:output.find('</result>')]
-            print('output: ', output)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"output: {output}")
 
             reflection = output            
             break
@@ -3103,15 +3017,13 @@ def extract_reflection2(draft):
                 "reflection": reflection
             })
             print(f'attempt: {attempt}, info: {info}')
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"attempt: {attempt}, info: {info}")
                 
             if not info['parsed'] == None:
                 parsed_info = info['parsed']
-                print('parsed_info: ', parsed_info)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"parsed_info: {parsed_info}")
                 search_queries = parsed_info.search_queries
-                print("search_queries: ", search_queries)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"search_queries: {search_queries}")
             break
                 
         except Exception:
@@ -3129,9 +3041,8 @@ def run_reflection(query, st):
             
     def generate(state: State, config):    
         print("###### generate ######")
-        logger.info(f"prepare: {prepare}")
-        print('task: ', state['task'])
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### generate ######")
+        logger.info(f"task: {state['task']}")
 
         global reference_docs
 
@@ -3176,8 +3087,7 @@ def run_reflection(query, st):
                     "context": relevant_context                
                 }
             )
-            print('result: ', result)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"result: {result}")
 
             draft = result.content        
             if draft.find('<result>')!=-1:
@@ -3195,9 +3105,8 @@ def run_reflection(query, st):
     
     def reflect(state: State, config):
         print("###### reflect ######")
-        logger.info(f"prepare: {prepare}")
-        print('draft: ', state["draft"])
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### reflect ######")
+        logger.info(f"draft: {state["draft"]}")
 
         draft = state["draft"]
         
@@ -3260,8 +3169,7 @@ def run_reflection(query, st):
         return revise_chain
     
     def revise_answer(state: State, config):           
-        print("###### revise_answer ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### revise_answer ######")
 
         if debug_mode=="Enable":
             st.info("개선할 사항을 반영하여 답변을 생성중입니다.")
@@ -3301,12 +3209,10 @@ def run_reflection(query, st):
         if len(selected_docs):
             for d in selected_docs:
                 content += d.page_content+'\n\n'
-            print('content: ', content)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"content: {content}")
 
         for attempt in range(5):
-            print(f'attempt: {attempt}')
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"attempt: {attempt}")
 
             revise_chain = get_revise_prompt(state['task'])
             try:
@@ -3318,16 +3224,14 @@ def run_reflection(query, st):
                     }
                 )
                 output = res.content
-                print('output: ', output)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"output: {output}")
 
                 if output.find('<result>')==-1:
                     draft = output
                 else:
                     draft = output[output.find('<result>')+8:output.find('</result>')]
 
-                print('revised_answer: ', draft)
-                logger.info(f"prepare: {prepare}")
+                logger.info(f"revised_answer: {draft}")
                 break
 
             except Exception:
@@ -3342,11 +3246,9 @@ def run_reflection(query, st):
     
     MAX_REVISIONS = 1
     def should_continue(state: State, config):
-        print("###### should_continue ######")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### should_continue ######")
         max_revisions = config.get("configurable", {}).get("max_revisions", MAX_REVISIONS)
-        print("max_revisions: ", max_revisions)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"max_revisions: {max_revisions}")
             
         if state["revision_number"] > max_revisions:
             return "end"
@@ -3394,8 +3296,7 @@ def run_reflection(query, st):
     }
     
     output = app.invoke(inputs, config)
-    print('output: ', output)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"output: {output}")
         
     msg = output["draft"]
 
@@ -3417,10 +3318,8 @@ def run_planning(query, st):
         answer: str
 
     def plan_node(state: State, config):
-        print("###### plan ######")
-        logger.info(f"prepare: {prepare}")
-        print('input: ', state["input"])
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### plan ######")
+        logger.info(f"input: {state["input"]}")
 
         if debug_mode=="Enable":
             st.info(f"계획을 생성합니다. 요청사항: {state['input']}")
@@ -3450,8 +3349,7 @@ def run_planning(query, st):
         response = planner.invoke({
             "question": state["input"]
         })
-        print('response.content: ', response.content)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"response.content: {response.content}")
         result = response.content
         
         #output = result[result.find('<result>')+8:result.find('</result>')]
@@ -3459,8 +3357,7 @@ def run_planning(query, st):
         
         plan = output.strip().replace('\n\n', '\n')
         planning_steps = plan.split('\n')
-        print('planning_steps: ', planning_steps)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"planning_steps: {planning_steps}")
 
         if debug_mode=="Enable":
             st.info(f"생성된 계획: {planning_steps}")
@@ -3521,13 +3418,10 @@ def run_planning(query, st):
         return output
 
     def execute_node(state: State, config):
-        print("###### execute ######")
-        logger.info(f"prepare: {prepare}")
-        print('input: ', state["input"])
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"###### execute ######")
+        logger.info(f"input: {state["input"]}")
         plan = state["plan"]
-        print('plan: ', plan) 
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"plan: {plan}")
         
         chat = get_chat()
 
@@ -3554,10 +3448,9 @@ def run_planning(query, st):
 
         result = generate_answer(chat, relevant_docs, plan[0])
         
-        print('task: ', plan[0])
-        logger.info(f"prepare: {prepare}")
-        print('executor output: ', result)
-        logger.info(f"prepare: {prepare}")
+        print('task: ', )
+        logger.info(f"task: {plan[0]}")
+        logger.info(f"executor output: {result}")
 
         global reference_docs
         if len(filtered_docs):
@@ -3576,14 +3469,11 @@ def run_planning(query, st):
         }
             
     def replan_node(state: State, config):
-        print('#### replan ####')
-        logger.info(f"prepare: {prepare}")
-        print('state of replan node: ', state)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"#### replan ####")
+        logger.info(f"state of replan node: {state}")
 
         if len(state["plan"]) == 1:
-            print('last plan: ', state["plan"])
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"plan: {state["plan"]}")
             return {"response":state["info"][-1]}
         
         if debug_mode=="Enable":
@@ -3631,21 +3521,18 @@ def run_planning(query, st):
             "plan": state["plan"],
             "past_steps": state["past_steps"]
         })
-        print('replanner output: ', response.content)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"replanner output: {response.content}")
         result = response.content
 
         if result.find('<plan>') == -1:
             return {"response":response.content}
         else:
             output = result[result.find('<plan>')+6:result.find('</plan>')]
-            print('plan output: ', output)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"plan output: {output}")
 
             plans = output.strip().replace('\n\n', '\n')
             planning_steps = plans.split('\n')
-            print('planning_steps: ', planning_steps)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"planning_steps: {planning_steps}")
 
             if debug_mode=="Enable":
                 st.info(f"새로운 계획: {planning_steps}")
@@ -3653,35 +3540,28 @@ def run_planning(query, st):
             return {"plan": planning_steps}
         
     def should_end(state: State) -> Literal["continue", "end"]:
-        print('#### should_end ####')
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"#### should_end ####")
         # print('state: ', state)
         
         if "response" in state and state["response"]:
-            print('response: ', state["response"])     
-            logger.info(f"prepare: {prepare}")       
+            logger.info(f"response: {state["response"]}")       
             next = "end"
         else:
-            print('plan: ', state["plan"])
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"plan: {state["plan"]}")
             next = "continue"
-        print(f"should_end response: {next}")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"should_end response: {next}")
         
         return next
         
     def final_answer(state: State) -> str:
-        print('#### final_answer ####')
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"#### final_answer ####")
         
         # get final answer
         context = "".join(f"{info}\n" for info in state['info'])
-        print('context: ', context)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"context: {context}")
         
         query = state['input']
-        print('query: ', query)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"query: {query}")
 
         if debug_mode=="Enable":
             st.info(f"최종 답변을 생성합니다.")
@@ -3729,8 +3609,7 @@ def run_planning(query, st):
             else:
                 output = result[result.find('<result>')+8:result.find('</result>')]
                 
-            print('output: ', output)
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"output: {output}")
             
         except Exception:
             err_msg = traceback.format_exc()
@@ -3775,11 +3654,9 @@ def run_planning(query, st):
     
     for output in app.stream(inputs, config):   
         for key, value in output.items():
-            print(f"Finished: {key}")
-            logger.info(f"prepare: {prepare}")
+            logger.info(f"Finished: {key}")
             #print("value: ", value)            
-    print('value: ', value)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"value: {value}")
 
     reference = ""
     if reference_docs:
@@ -3822,8 +3699,7 @@ def translate_text(text, model_name):
             }
         )
         msg = result.content
-        print('translated text: ', msg)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"translated text: {msg}")
     except Exception:
         err_msg = traceback.format_exc()
         logger.info(f"error message: {err_msg}")                    
@@ -3849,8 +3725,7 @@ def get_image_summarization(object_name, prompt, st):
 
     if debug_mode=="Enable":
         status = "이미지를 가져옵니다."
-        print('status: ', status)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"status: {status}")
         st.info(status)
                 
     image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+object_name)
@@ -3860,16 +3735,14 @@ def get_image_summarization(object_name, prompt, st):
     img = Image.open(BytesIO(image_content))
     
     width, height = img.size 
-    print(f"width: {width}, height: {height}, size: {width*height}")
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"width: {width}, height: {height}, size: {width*height}")
     
     isResized = False
     while(width*height > 5242880):                    
         width = int(width/2)
         height = int(height/2)
         isResized = True
-        print(f"width: {width}, height: {height}, size: {width*height}")
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"width: {width}, height: {height}, size: {width*height}")
     
     if isResized:
         img = img.resize((width, height))
@@ -3881,13 +3754,11 @@ def get_image_summarization(object_name, prompt, st):
     # extract text from the image
     if debug_mode=="Enable":
         status = "이미지에서 텍스트를 추출합니다."
-        print('status: ', status)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"status: {status}")
         st.info(status)
 
     text = extract_text(img_base64)
-    print('extracted text: ', text)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"extracted text: {text}")
 
     if text.find('<result>') != -1:
         extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
@@ -3897,26 +3768,22 @@ def get_image_summarization(object_name, prompt, st):
     
     if debug_mode=="Enable":
         status = f"### 추출된 텍스트\n\n{extracted_text}"
-        print('status: ', status)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"status: {status}")
         st.info(status)
     
     if debug_mode=="Enable":
         status = "이미지의 내용을 분석합니다."
-        print('status: ', status)
-        logger.info(f"prepare: {prepare}")
+        logger.info(f"status: {status}")
         st.info(status)
 
     image_summary = summary_image(img_base64, prompt)
-    print('image summary: ', image_summary)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"image summary: {image_summary}")
         
     if len(extracted_text) > 10:
         contents = f"## 이미지 분석\n\n{image_summary}\n\n## 추출된 텍스트\n\n{extracted_text}"
     else:
         contents = f"## 이미지 분석\n\n{image_summary}"
-    print('image contents: ', contents)
-    logger.info(f"prepare: {prepare}")
+    logger.info(f"image contents: {contents}")
 
     return contents
 

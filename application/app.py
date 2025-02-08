@@ -16,8 +16,7 @@ stdout_handler.setLevel(logging.INFO)
 stdout_handler.setFormatter(formatter)
 
 enableLoggerApp = chat.get_logger_state()
-print('enableLoggerApp: ', enableLoggerApp)
-
+logger.info(f"enableLoggerApp: {enableLoggerApp}")
 if not enableLoggerApp:
     logger.addHandler(stdout_handler)
     try:
@@ -107,7 +106,7 @@ with st.sidebar:
         uploaded_file = st.file_uploader("이미지 요약을 위한 파일을 선택합니다.", type=["png", "jpg", "jpeg"])
 
     elif mode=='RAG' or mode=="Agentic RAG" or mode=="Corrective RAG" or mode=="Self RAG" or mode=="Self Corrective RAG":
-        print('fileId: ', chat.fileId)
+        logger.info(f"fileId: {chat.fileId}")
         uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
 
     # debug checkbox
@@ -214,12 +213,12 @@ if uploaded_file and clear_button==False and not mode == '이미지 분석':
 
         if debugMode=='Enable':
             status = '선택한 파일을 업로드합니다.'
-            print('status: ', status)
+            logger.info(f"status: {status}")
             st.info(status)
 
         file_name = uploaded_file.name
         file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
-        print('file_url: ', file_url) 
+        logger.info(f"file_url: {file_url}")
             
         status = f'선택한 "{file_name}"의 내용을 요약합니다.'
         # my_bar = st.sidebar.progress(0, text=status)
@@ -228,19 +227,19 @@ if uploaded_file and clear_button==False and not mode == '이미지 분석':
         #     time.sleep(0.2)
         #     my_bar.progress(percent_complete + 1, text=status)
         if debugMode=='Enable':
-            print('status: ', status)
+            logger.info(f"status: {status}")
             st.info(status)
     
         msg = chat.get_summary_of_uploaded_file(file_name, st)
         st.session_state.messages.append({"role": "assistant", "content": f"선택한 문서({file_name})를 요약하면 아래와 같습니다.\n\n{msg}"})    
-        print('msg: ', msg)
+        logger.info(f"msg: {msg}")
         st.rerun()
 if uploaded_file and clear_button==False and mode == '이미지 분석':
     st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
 
     file_name = uploaded_file.name
     image_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
-    print('image_url: ', image_url)
+    logger.info(f"image_url: {image_url}")
 
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
@@ -249,13 +248,13 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
     st.session_state.messages.append({"role": "user", "content": prompt})  # add user message to chat history
     prompt = prompt.replace('"', "").replace("'", "")
-    print('prompt: ', prompt)
+    logger.info(f"prompt: {prompt}")
 
     with st.chat_message("assistant"):
         if mode == '일상적인 대화':
             stream = chat.general_conversation(prompt)
             response = st.write_stream(stream)
-            print('response: ', response)
+            logger.info(f"response: {response}")
             st.session_state.messages.append({"role": "assistant", "content": response})
             chat.save_chat_history(prompt, response)
 
@@ -263,7 +262,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("running...", expanded=True, state="running") as status:
                 response, reference_docs = chat.get_answer_using_opensearch(prompt, st)     
                 st.write(response)
-                print('response: ', response)                  
+                logger.info(f"response: {response}")            
                 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -277,7 +276,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_agent_executor(prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
                 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -292,7 +291,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 revise_prompt = chat.revise_question(prompt, st)
                 response, reference_docs = chat.run_agent_executor(revise_prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
                 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -306,12 +305,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_corrective_rag(prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
 
                 if response.find('<thinking>') != -1:
-                    print('Remove <thinking> tag.')
+                    logger.info(f"Remove <thinking> tag.")
                     response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
+                    logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -325,12 +324,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_self_rag(prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
 
                 if response.find('<thinking>') != -1:
-                    print('Remove <thinking> tag.')
+                    logger.info(f"Remove <thinking> tag.")
                     response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
+                    logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -344,12 +343,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_self_corrective_rag(prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
 
                 if response.find('<thinking>') != -1:
-                    print('Remove <thinking> tag.')
+                    logger.info(f"Remove <thinking> tag.")
                     response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
+                    logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -364,12 +363,13 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 # esponse, reference_docs = chat.run_knowledge_guru(prompt, st)
                 response, reference_docs = chat.run_reflection(prompt, st)     
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
 
                 if response.find('<thinking>') != -1:
                     print('Remove <thinking> tag.')
+                    logger.info(f"Remove <thinking> tag.")
                     response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
+                    logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -383,12 +383,12 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             with st.status("thinking...", expanded=True, state="running") as status:
                 response, reference_docs = chat.run_planning(prompt, st)
                 st.write(response)
-                print('response: ', response)
+                logger.info(f"response: {response}")
 
                 if response.find('<thinking>') != -1:
-                    print('Remove <thinking> tag.')
+                    logger.info(f"Remove <thinking> tag.")
                     response = response[response.find('</thinking>')+12:]
-                    print('response without tag: ', response)
+                    logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
                 if debugMode != "Enable":
@@ -421,7 +421,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             stream = chat.general_conversation(prompt)
 
             response = st.write_stream(stream)
-            print('response: ', response)
+            logger.info(f"response: {response}")
 
             st.session_state.messages.append({"role": "assistant", "content": response})
             chat.save_chat_history(prompt, response)
