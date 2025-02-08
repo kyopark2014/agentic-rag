@@ -135,7 +135,7 @@ cat << EOF > /tmp/config.json
         "debug":false
     },
     "metrics": {
-        "namespace": "CloudWatch/StreamlitServerMetrics",
+        "namespace": "CloudWatch/AgenticRAGMetrics",
         "metrics_collected":{
           "cpu":{
              "resources":[
