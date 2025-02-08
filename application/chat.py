@@ -1896,7 +1896,7 @@ def run_agent_executor(query, st):
     def call_model(state: State, config):
         print("###### call_model ######")
         logger.info(f"###### call_model ######")
-        logger.info(f"state: {state["messages"]}")
+        logger.info(f"state: {state['messages']}")
                 
         if isKorean(state["messages"][0].content)==True:
             system = (
