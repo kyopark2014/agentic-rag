@@ -1,34 +1,11 @@
 import streamlit as st 
 import chat
-import time
-import uuid 
-import logging
-import sys
+import utils
+import tool_use
+import reflection
+import planning
 
-# logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-# formatter = logging.Formatter('%(asctime)s | %(filename)s:%(lineno)d | %(message)s')
-formatter = logging.Formatter('%(message)s')
-
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.INFO)
-stdout_handler.setFormatter(formatter)
-
-enableLoggerApp = chat.get_logger_state()
-logger.info(f"enableLoggerApp: {enableLoggerApp}")
-if not enableLoggerApp:
-    logger.addHandler(stdout_handler)
-    try:
-        with open("/home/config.json", "r", encoding="utf-8") as f:
-            file_handler = logging.FileHandler('/var/log/application/logs.log')
-            file_handler.setLevel(logging.INFO)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-            logger.info("Ready to write log (app)!")
-    except Exception:
-        logger.debug(f"Not available to write application log (app)")
+logger = utils.CreateLogger("streamlit")
 
 # title
 st.set_page_config(page_title='Agentic RAG', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
@@ -273,7 +250,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response, reference_docs = chat.run_agent_executor(prompt, st)
+                response, reference_docs = tool_use.run_agent_executor(prompt, st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 
@@ -288,7 +265,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         elif mode == 'Agentic RAG (Chat)':
             with st.status("thinking...", expanded=True, state="running") as status:
                 revise_prompt = chat.revise_question(prompt, st)
-                response, reference_docs = chat.run_agent_executor(revise_prompt, st)
+                response, reference_docs = tool_use.run_agent_executor(revise_prompt, st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 
@@ -360,7 +337,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         elif mode == 'Agent (Reflection)':
             with st.status("thinking...", expanded=True, state="running") as status:
                 # esponse, reference_docs = chat.run_knowledge_guru(prompt, st)
-                response, reference_docs = chat.run_reflection(prompt, st)     
+                response, reference_docs = reflection.run_reflection(prompt, st)     
                 st.write(response)
                 logger.info(f"response: {response}")
 
@@ -380,7 +357,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Agent (Planning)':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response, reference_docs = chat.run_planning(prompt, st)
+                response, reference_docs = planning.run_planning(prompt, st)
                 st.write(response)
                 logger.info(f"response: {response}")
 
