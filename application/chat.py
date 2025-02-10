@@ -8,10 +8,10 @@ import uuid
 import base64
 import csv
 import info # user defined info such as models
-import operator
 import yfinance as yf
 import utils
 import rag_opensearch as rag
+import search
 
 from io import BytesIO
 from PIL import Image
@@ -22,21 +22,16 @@ from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langchain.memory import ConversationBufferWindowMemory
 
 from langchain.docstore.document import Document
-from tavily import TavilyClient  
-from langchain_community.tools.tavily_search import TavilySearchResults
-from botocore.exceptions import ClientError
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langgraph.graph import START, END, StateGraph
-from typing import Any, List, Tuple, Dict, Optional, cast, Literal, Sequence, Union
+from typing import List
 from typing_extensions import Annotated, TypedDict
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
 
 from multiprocessing import Process, Pipe
 from urllib import parse
 from pydantic.v1 import BaseModel, Field
 from langchain_core.output_parsers import StrOutputParser
-from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
 from langchain_aws import BedrockEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -62,6 +57,7 @@ def initiate():
 
 initiate()
 
+# load config
 try:
     with open("/home/config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
@@ -314,42 +310,6 @@ if langsmith_api_key:
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_PROJECT"] = langchain_project
 
-# api key to use Tavily Search
-tavily_key = tavily_api_wrapper = ""
-try:
-    get_tavily_api_secret = secretsmanager.get_secret_value(
-        SecretId=f"tavilyapikey-{projectName}"
-    )
-    #print('get_tavily_api_secret: ', get_tavily_api_secret)
-    secret = json.loads(get_tavily_api_secret['SecretString'])
-    #print('secret: ', secret)
-
-    if "tavily_api_key" in secret:
-        tavily_key = secret['tavily_api_key']
-        #print('tavily_api_key: ', tavily_api_key)
-
-        if tavily_key:
-            tavily_api_wrapper = TavilySearchAPIWrapper(tavily_api_key=tavily_key)
-            #     os.environ["TAVILY_API_KEY"] = tavily_key
-
-            # Tavily Tool Test
-            # query = 'what is Amazon Nova Pro?'
-            # search = TavilySearchResults(
-            #     max_results=1,
-            #     include_answer=True,
-            #     include_raw_content=True,
-            #     api_wrapper=tavily_api_wrapper,
-            #     search_depth="advanced", # "basic"
-            #     # include_domains=["google.com", "naver.com"]
-            # )
-            # output = search.invoke(query)
-            # print('tavily output: ', output)    
-        else:
-           logger.info(f"tavily_key is required.") 
-except Exception as e: 
-    logger.info(f"Tavily credential is required: {e}")
-    raise e
-
 def isKorean(text):
     # check korean
     pattern_hangul = re.compile('[\u3131-\u3163\uac00-\ud7a3]+')
@@ -592,52 +552,6 @@ def check_duplication(docs):
     
     return updated_docs
 
-def retrieve_documents_from_tavily(query, top_k):
-    logger.info(f"###### retrieve_documents_from_tavily ######")
-
-    relevant_documents = []        
-    search = TavilySearchResults(
-        max_results=top_k,
-        include_answer=True,
-        include_raw_content=True,        
-        api_wrapper=tavily_api_wrapper,
-        search_depth="advanced", 
-        # include_domains=["google.com", "naver.com"]
-    )
-
-    try: 
-        output = search.invoke(query)
-        logger.info(f"tavily output: {output}")
-
-        if output[:9] == "HTTPError":
-            logger.info(f"output: {output}")
-            raise Exception ("Not able to request to tavily")
-        else:        
-            logger.info(f"--> tavily query: {query}")
-            for i, result in enumerate(output):
-                logger.info(f"{i}: {result}")
-                if result:
-                    content = result.get("content")
-                    url = result.get("url")
-                    
-                    relevant_documents.append(
-                        Document(
-                            page_content=content,
-                            metadata={
-                                'name': 'WWW',
-                                'url': url,
-                                'from': 'tavily'
-                            },
-                        )
-                    )                
-    
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")                    
-        # raise Exception ("Not able to request to tavily")   
-
-    return relevant_documents 
-
 def get_references(docs):    
     reference = ""
     for i, doc in enumerate(docs):
@@ -691,35 +605,6 @@ def get_references(docs):
         reference = "\n\n#### 관련 문서\n"+reference
 
     return reference
-
-def tavily_search(query, k):
-    docs = []    
-    try:
-        tavily_client = TavilyClient(
-            api_key=tavily_key
-        )
-        response = tavily_client.search(query, max_results=k)
-        # print('tavily response: ', response)
-            
-        for r in response["results"]:
-            name = r.get("title")
-            if name is None:
-                name = 'WWW'
-            
-            docs.append(
-                Document(
-                    page_content=r.get("content"),
-                    metadata={
-                        'name': name,
-                        'url': r.get("url"),
-                        'from': 'tavily'
-                    },
-                )
-            )                   
-    except Exception as e:
-        logger.info(f"Exception: {e}")
-
-    return docs
 
 def extract_thinking_tag(response, st):
     if response.find('<thinking>') != -1:
@@ -1377,48 +1262,6 @@ def get_rewrite():
     question_rewriter = re_write_prompt | structured_llm_rewriter
     return question_rewriter
 
-def web_search(question):
-    # Web search
-    search = TavilySearchResults(
-        max_results=3,
-        include_answer=True,
-        include_raw_content=True,
-        api_wrapper=tavily_api_wrapper,
-        search_depth="advanced", # "basic"
-        # include_domains=["google.com", "naver.com"]
-    )
-        
-    docs = []
-    try: 
-        output = search.invoke(question)
-        if output[:9] == "HTTPError":
-            logger.info(f"output: {output}")
-            raise Exception ("Not able to request to tavily")
-        else:
-            for result in output:
-                logger.info(f"result: {result}")
-
-                if result:
-                    content = result.get("content")
-                    url = result.get("url")
-                    
-                    docs.append(
-                        Document(
-                            page_content=content,
-                            metadata={
-                                'name': 'WWW',
-                                'url': url,
-                                'from': 'tavily'
-                            },
-                        )
-                    )
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")           
-        # raise Exception ("Not able to request to tavily")   
-    
-    return docs
-
 def get_hallucination_grader():    
     class GradeHallucinations(BaseModel):
         """Binary score for hallucination present in generation answer."""
@@ -1590,7 +1433,7 @@ def run_corrective_rag(query, st):
         if debug_mode=="Enable":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
-        docs = web_search(question)
+        docs = search.retrieve_documents_from_tavily(question, top_k=3)
         # print('docs: ', docs)
 
         if debug_mode == "Enable":
@@ -2133,7 +1976,7 @@ def run_self_corrective_rag(query, st):
         if debug_mode=="Enable":
             st.info(f"인터넷을 검색합니다. 검색어: {question}")
         
-        docs = web_search(question)
+        docs = search.retrieve_documents_from_tavily(question, top_k=3)
         if debug_mode == "Enable":
             st.info(f"{len(docs)}개의 문서가 검색되었습니다.")
 

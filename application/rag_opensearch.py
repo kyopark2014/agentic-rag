@@ -3,7 +3,7 @@ import chat
 import utils
 import json
 from langchain_community.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
-from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+from opensearchpy import OpenSearch
 from langchain.docstore.document import Document
 
 logger = utils.CreateLogger("rag-opensearch")

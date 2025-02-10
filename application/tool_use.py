@@ -7,16 +7,16 @@ import yfinance as yf
 import utils
 import chat
 import rag_opensearch as rag
+import search
 
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
 from bs4 import BeautifulSoup
 from pytz import timezone
-from langchain_community.tools.tavily_search import TavilySearchResults
 from typing_extensions import Annotated, TypedDict
 from langgraph.graph.message import add_messages
-from typing import Any, List, Tuple, Dict, Optional, cast, Literal, Sequence, Union
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
+from typing import Literal
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
 from langgraph.graph import START, END, StateGraph
 from langchain.docstore.document import Document
@@ -120,16 +120,6 @@ def get_weather_info(city: str) -> str:
     logger.info(f"weather_str: {weather_str}")                        
     return weather_str
 
-# Tavily Tool
-tavily_tool = TavilySearchResults(
-    max_results=3,
-    include_answer=True,
-    include_raw_content=True,
-    api_wrapper=chat.tavily_api_wrapper,
-    search_depth="advanced", # "basic"
-    # include_domains=["google.com", "naver.com"]
-)
-
 @tool    
 def search_by_opensearch(keyword: str) -> str:
     """
@@ -185,49 +175,17 @@ def search_by_tavily(keyword: str) -> str:
     global reference_docs    
     answer = ""
     
-    if chat.tavily_key:
-        keyword = keyword.replace('\'','')
-        
-        search = TavilySearchResults(
-            max_results=3,
-            include_answer=True,
-            include_raw_content=True,
-            api_wrapper=chat.tavily_api_wrapper,
-            search_depth="advanced", # "basic"
-            # include_domains=["google.com", "naver.com"]
-        )
-                    
-        try: 
-            output = search.invoke(keyword)
-            if output[:9] == "HTTPError":
-                logger.info(f"output: {output}")
-                raise Exception ("Not able to request to tavily")
-            else:        
-                logger.info(f"tavily output: {output}")
-                if output == "HTTPError('429 Client Error: Too Many Requests for url: https://api.tavily.com/search')":            
-                    raise Exception ("Not able to request to tavily")
-                
-                for result in output:
-                    logger.info(f"result: {result}")
-                    if result:
-                        content = result.get("content")
-                        url = result.get("url")
-                        
-                        reference_docs.append(
-                            Document(
-                                page_content=content,
-                                metadata={
-                                    'name': 'WWW',
-                                    'url': url,
-                                    'from': 'tavily'
-                                },
-                            )
-                        )                
-                        answer = answer + f"{content}, URL: {url}\n"        
-        except Exception:
-            err_msg = traceback.format_exc()
-            logger.info(f"error message: {err_msg}")           
-            # raise Exception ("Not able to request to tavily")  
+    keyword = keyword.replace('\'','')
+    relevant_documents = search.retrieve_documents_from_tavily(keyword, top_k=3)
+
+    answer = ""
+    for doc in reference_docs:
+        content = doc.page_content
+        url = doc.metadata['url']
+        answer += + f"{content}, URL: {url}\n" 
+
+    if len(relevant_documents):
+        reference_docs += relevant_documents
 
     if answer == "":
         # answer = "No relevant documents found." 

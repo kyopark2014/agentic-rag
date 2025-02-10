@@ -3,6 +3,7 @@ import chat
 import traceback
 import rag_opensearch as rag
 import tool_use
+import search
 
 from pydantic.v1 import BaseModel, Field
 from langchain_core.prompts import MessagesPlaceholder, ChatPromptTemplate
@@ -12,11 +13,12 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from typing import Literal
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langchain_community.tools.tavily_search import TavilySearchResults
 
 logger = utils.CreateLogger("reflection")
 
 reference_docs = []
+
+useEnhancedSearch = False
 
 ####################### LangGraph #######################
 # Agentic Workflow: Reflection
@@ -189,7 +191,7 @@ def run_reflection(query, st):
 
         top_k = 4
         relevant_docs = rag.retrieve_documents_from_opensearch(query, top_k=top_k)  
-        relevant_docs += chat.retrieve_documents_from_tavily(query, top_k=top_k)
+        relevant_docs += search.retrieve_documents_from_tavily(query, top_k=top_k)
     
         # grade   
         if chat.debug_mode == "Enable":
@@ -317,7 +319,7 @@ def run_reflection(query, st):
                 st.info(f"검색을 수행합니다. 검색어: {q}")
         
             relevant_docs = rag.retrieve_documents_from_opensearch(q, top_k)     
-            relevant_docs += chat.retrieve_documents_from_tavily(q, top_k)
+            relevant_docs += search.retrieve_documents_from_tavily(q, top_k)
 
             # grade   
             if chat.debug_mode == "Enable":
@@ -695,25 +697,14 @@ def run_knowledge_guru(query, st):
             st.info("개선할 사항을 반영하여 답변을 생성중입니다.")
                     
         content = []        
-        if chat.useEnhancedSearch: # search agent
+        if useEnhancedSearch: # search agent
             for q in state["search_queries"]:
-                response = enhanced_search(q, config)
-                # print(f'q: {q}, response: {response}')
+                response = search.enhanced_search(q, st)       
+                logger.info('q: {q}, response: {response}')
+
                 content.append(response)                   
         else:
-            search = TavilySearchResults(
-                max_results=2,
-                include_answer=True,
-                include_raw_content=True,
-                api_wrapper=chat.tavily_api_wrapper,
-                search_depth="advanced", 
-                # include_domains=["google.com", "naver.com"]
-            )
-            for q in state["search_queries"]:
-                response = search.invoke(q)     
-                for r in response:
-                    if 'content' in r:
-                        content.append(r['content'])     
+            content = search.retrieve_contents_from_tavily(state["search_queries"], top_k=2)
 
         for attempt in range(5):
             logger.info(f"attempt: {attempt}")

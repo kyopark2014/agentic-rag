@@ -3,6 +3,7 @@ import utils
 import operator
 import chat
 import traceback
+import search
 
 from typing_extensions import Annotated, TypedDict
 from typing import List, Tuple,Literal
@@ -136,7 +137,7 @@ def run_planning(query, st):
         
         # retrieve
         relevant_docs = rag.retrieve_documents_from_opensearch(plan[0], top_k=4)     
-        relevant_docs += chat.retrieve_documents_from_tavily(plan[0], top_k=4)
+        relevant_docs += search.retrieve_documents_from_tavily(plan[0], top_k=4)
         
         # grade   
         if chat.debug_mode == "Enable":
