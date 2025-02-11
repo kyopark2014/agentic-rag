@@ -119,7 +119,7 @@ AWS Credential을 입력합니다.
 
 이때 실행된 결과는 아래와 같습니다.
 
-![image](https://github.com/user-attachments/assets/ddb89ac5-5b55-4de6-94d6-f9b6aacb211f)
+![image](https://github.com/user-attachments/assets/7acd755e-37c1-4e9e-a0fc-563baa64b4b9)
 
 
 ## 실행환경 (선택)
