@@ -223,6 +223,12 @@ cat /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
 
 Output의 environmentforbedrockagent의 내용을 복사하여 [config.json](./application/config.json)을 업데이트 합니다. 이미 "aws configure"가 설정되어 있어야합니다.
 
+만약 visual studio code 사용자라면 config.json 파일은 아래 명령어를 사용합니다.
+
+```text
+code application/config.json
+```
+
 아래와 같이 필요한 패키지를 설치합니다.
 
 ```text
