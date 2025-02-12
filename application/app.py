@@ -160,6 +160,10 @@ if chart == 'Enable':
         col1, col2, col3 = st.columns([0.1, 0.25, 0.1])
         url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/agentic-rag.png"
         col2.image(url)
+    if mode == 'Agentic RAG (Chat)':
+        col1, col2, col3 = st.columns([0.1, 0.25, 0.1])
+        url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/agentic-rag.png"
+        col2.image(url)
     elif mode == 'Corrective RAG':
         col1, col2, col3 = st.columns([0.2, 0.3, 0.2])
         url = "https://raw.githubusercontent.com/kyopark2014/agentic-rag/main/contents/corrective-rag.png"
@@ -241,8 +245,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 logger.info(f"response: {response}")            
                 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
             
@@ -289,8 +291,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
             
@@ -308,8 +308,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
 
@@ -327,8 +325,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
 
@@ -348,8 +344,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
             
@@ -367,8 +361,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     logger.info(f"response without tag: {response}")
 
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
 
                 chat.save_chat_history(prompt, response)
             
@@ -386,12 +378,15 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 st.stop()
 
             else:
-                with st.status("thinking...", expanded=True, state="running") as status:
-                    summary = chat.get_image_summarization(file_name, prompt, st)
-                    st.write(summary)
+                if modelName == "Claude 3.5 Haiku":
+                    st.error("Claude 3.5 Haiku은 이미지를 지원하지 않습니다. 다른 모델을 선택해주세요.")
+                else:
+                    with st.status("thinking...", expanded=True, state="running") as status:
+                        summary = chat.get_image_summarization(file_name, prompt, st)
+                        st.write(summary)
 
-                    st.session_state.messages.append({"role": "assistant", "content": summary})
-                    # st.rerun()
+                        st.session_state.messages.append({"role": "assistant", "content": summary})
+                        # st.rerun()
 
         else:
             stream = chat.general_conversation(prompt)

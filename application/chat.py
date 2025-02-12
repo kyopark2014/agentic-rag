@@ -369,28 +369,8 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
         #s3_key = f"uploaded_images/{timestamp}_{unique_id}_{file_name}"
         s3_key = f"{s3_prefix}/{file_name}"
 
-        if file_name.lower().endswith((".jpg", ".jpeg")):
-            content_type = "image/jpeg"
-        elif file_name.lower().endswith((".pdf")):
-            content_type = "application/pdf"
-        elif file_name.lower().endswith((".txt")):
-            content_type = "text/plain"
-        elif file_name.lower().endswith((".csv")):
-            content_type = "text/csv"
-        elif file_name.lower().endswith((".ppt", ".pptx")):
-            content_type = "application/vnd.ms-powerpoint"
-        elif file_name.lower().endswith((".doc", ".docx")):
-            content_type = "application/msword"
-        elif file_name.lower().endswith((".xls")):
-            content_type = "application/vnd.ms-excel"
-        elif file_name.lower().endswith((".py")):
-            content_type = "text/x-python"
-        elif file_name.lower().endswith((".js")):
-            content_type = "application/javascript"
-        elif file_name.lower().endswith((".md")):
-            content_type = "text/markdown"
-        elif file_name.lower().endswith((".png")):
-            content_type = "image/png"
+        content_type = utils.get_contents_type(file_name)       
+        logger.info(f"content_type: {content_type}") 
         
         user_meta = {  # user-defined metadata
             "content_type": content_type,
@@ -807,7 +787,7 @@ def summary_image(img_base64, instruction):
         except Exception:
             err_msg = traceback.format_exc()
             logger.info(f"error message: {err_msg}")                    
-            raise Exception ("Not able to request to LLM")
+            # raise Exception ("Not able to request to LLM")
         
     return extracted_text
 
@@ -842,7 +822,7 @@ def extract_text(img_base64):
         except Exception:
             err_msg = traceback.format_exc()
             logger.info(f"error message: {err_msg}")                    
-            raise Exception ("Not able to request to LLM")
+            # raise Exception ("Not able to request to LLM")
     
     logger.info(f"extracted_text: {extracted_text}")
     if len(extracted_text)<10:
