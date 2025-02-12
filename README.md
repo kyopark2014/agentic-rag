@@ -627,6 +627,14 @@ sudo runuser -l ec2-user -c "/home/ec2-user/.local/bin/streamlit run /home/ec2-u
 
 메뉴에서는 아래와 항목들을 제공하고 있습니다.
 
+![image](https://github.com/user-attachments/assets/53049a34-68c8-4506-8b1e-d34ca70a6a7f)
+
+
+메뉴에서 [이미지 분석]과 모델로 [Claude 3.5 Sonnet]을 선택한 후에 [기다리는 사람들 사진](./contents/waiting_people.jpg)을 다운받아서 업로드합니다. 이후 "사진속에 있는 사람들은 모두 몇명인가요?"라고 입력후 결과를 확인하면 아래와 같습니다.
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/3e1ea017-4e46-4340-87c6-4ebf019dae4f" />
+
+
 
 ### RAG (Knowledge Base)
 
