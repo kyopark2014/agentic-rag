@@ -248,7 +248,9 @@ from rizaio import Riza
 def code_drawer(code):
     """
     Execute a Python script for draw a graph.
-    code: The Python code to execute
+    Since Python runtime cannot use external APIs, necessary data must be included in the code.
+    Graphs can only be written in English.
+    code: the Python code was written in English
     return: the url of graph
     """ 
     # The Python runtime does not have filesystem access, but does include the entire standard library.
