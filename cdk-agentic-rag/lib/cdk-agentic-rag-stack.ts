@@ -360,6 +360,18 @@ export class CdkAgenticRagStack extends cdk.Stack {
       },
     });
     tavilyApiSecret.grantRead(ec2Role) 
+
+    const codeInterpreterSecret = new secretsmanager.Secret(this, `code-interpreter-secret-for-${projectName}`, {
+      description: 'secret for code interpreter api key', // code interpreter
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      secretName: `code-interpreter-${projectName}`,
+      secretObjectValue: {
+        project_name: cdk.SecretValue.unsafePlainText(projectName),
+        code_interpreter_api_key: cdk.SecretValue.unsafePlainText(''),
+        code_interpreter_id: cdk.SecretValue.unsafePlainText(''),
+      },
+    });
+    codeInterpreterSecret.grantRead(ec2Role) 
     
     const pvrePolicy = new iam.PolicyStatement({  
       resources: ['*'],
@@ -592,7 +604,7 @@ EOF'`,
       `runuser -l ec2-user -c 'cd && git clone https://github.com/kyopark2014/${projectName}'`,
       `runuser -l ec2-user -c 'pip install streamlit streamlit_chat beautifulsoup4 pytz tavily-python'`,        
       `runuser -l ec2-user -c 'pip install boto3 langchain_aws langchain langchain_community'`,
-      `runuser -l ec2-user -c 'pip install langgraph opensearch-py PyPDF2 yfinance'`,      
+      `runuser -l ec2-user -c 'pip install langgraph opensearch-py PyPDF2 yfinance rizaio'`,      
       'systemctl enable streamlit.service',
       'systemctl start streamlit',
       `yum install -y amazon-cloudwatch-agent`,

@@ -124,8 +124,17 @@ if "messages" not in st.session_state:
 
 # Display chat messages from history on app rerun
 def display_chat_messages():
+    """Print message history
+    @returns None
+    """
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
+            if "images" in message:                
+                for url in message["images"]:
+                    logger.info(f"url: {url}")
+
+                    file_name = url[url.rfind('/')+1:]
+                    st.image(url, caption=file_name, use_container_width=True)
             st.markdown(message["content"])
 
 display_chat_messages()
@@ -218,8 +227,8 @@ if uploaded_file and clear_button==False and mode == '이미지 분석':
     st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
 
     file_name = uploaded_file.name
-    image_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
-    logger.info(f"image_url: {image_url}")
+    url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+    logger.info(f"url: {url}")
 
 # Always show the chat input
 if prompt := st.chat_input("메시지를 입력하세요."):
@@ -252,13 +261,22 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response, reference_docs = tool_use.run_agent_executor(prompt, st)
+                response, image_url, reference_docs = tool_use.run_agent_executor(prompt, st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
+                if len(image_url):
+                    for url in image_url:
+                        logger.info(f"url: {url}")
+
+                        file_name = url[url.rfind('/')+1:]
+                        st.image(url, caption=file_name, use_container_width=True)
+
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": response,
+                    "images": image_url if image_url else []
+                })
 
                 chat.save_chat_history(prompt, response)
             
@@ -267,13 +285,22 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         elif mode == 'Agentic RAG (Chat)':
             with st.status("thinking...", expanded=True, state="running") as status:
                 revise_prompt = chat.revise_question(prompt, st)
-                response, reference_docs = tool_use.run_agent_executor(revise_prompt, st)
+                response, image_url, reference_docs = tool_use.run_agent_executor(revise_prompt, st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                if debugMode != "Enable":
-                    st.rerun()
+                if len(image_url):
+                    for url in image_url:
+                        logger.info(f"url: {url}")
+
+                        file_name = url[url.rfind('/')+1:]
+                        st.image(url, caption=file_name, use_container_width=True)
+
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": response,
+                    "images": image_url if image_url else []
+                })
 
                 chat.save_chat_history(prompt, response)
             

@@ -86,6 +86,7 @@ if s3_bucket is None:
     raise Exception ("No storage!")
 
 s3_prefix = 'docs'
+s3_image_prefix = 'images'
 
 path = config["sharing_url"] if "sharing_url" in config else None
 if path is None:
@@ -309,6 +310,26 @@ if langsmith_api_key:
     os.environ["LANGCHAIN_API_KEY"] = langsmith_api_key
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_PROJECT"] = langchain_project
+
+# secret of code interpreter
+code_interpreter_api_key = ""
+try:
+    get_code_interpreter_api_secret = secretsmanager.get_secret_value(
+        SecretId=f"code-interpreter-{projectName}"
+    )
+    #print('get_code_interpreter_api_secret: ', get_code_interpreter_api_secret)
+    secret = json.loads(get_code_interpreter_api_secret['SecretString'])
+    #print('secret: ', secret)
+    code_interpreter_api_key = secret['code_interpreter_api_key']
+    code_interpreter_project = secret['project_name']
+    code_interpreter_id = secret['code_interpreter_id']
+
+    # logger.info(f"code_interpreter_id: {code_interpreter_id}")
+except Exception as e:
+    raise e
+
+if code_interpreter_api_key:
+    os.environ["RIZA_API_KEY"] = code_interpreter_api_key
 
 def isKorean(text):
     # check korean
@@ -1476,7 +1497,7 @@ def run_corrective_rag(query, st):
     reference = ""
     if reference_docs:
         reference = get_references(reference_docs)
-        
+
     return value["generation"] + reference, reference_docs
 
 ####################### LangGraph #######################
