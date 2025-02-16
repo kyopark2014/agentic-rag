@@ -296,7 +296,7 @@ print(image_base64)
         byteImage = BytesIO(base64.b64decode(base64Img))
 
         image_name = generate_short_uuid()+'.png'
-        url = chat.upload_to_s3(byteImage, image_name)
+        url = chat.upload_to_s3(byteImage, image_name, chat.contextual_embedding)
         logger.info(f"url: {url}")
 
         file_name = url[url.rfind('/')+1:]
