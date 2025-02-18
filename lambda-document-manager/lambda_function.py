@@ -156,11 +156,11 @@ def get_multimodal_info():
         return nova_pro_models
     elif model_name == 'Nova Lite':
         return nova_lite_models
-    elif model_name == 'Claude Sonnet 3.5':
+    elif model_name == 'Claude 3.5 Sonnet':
         return claude_sonnet_3_5_v2_models  # claude_sonnet_3_5_v1_models
-    elif model_name == 'Claude Sonnet 3.0':
+    elif model_name == 'Claude 3.0 Sonnet':
         return claude_sonnet_3_0_models    
-    elif model_name == 'Claude Haiku 3.5':
+    elif model_name == 'Claude 3.5 Haiku':
         return claude_haiku_3_5_models
 
 roleArn = os.environ.get('roleArn') 
