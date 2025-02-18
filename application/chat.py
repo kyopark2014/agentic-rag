@@ -378,6 +378,8 @@ def upload_to_s3(file_bytes, file_name, contextual_embedding):
     """
     Upload a file to S3 and return the URL
     """
+
+
     try:
         s3_client = boto3.client(
             service_name='s3',
@@ -594,6 +596,7 @@ def get_references(docs):
         #excerpt = ''.join(c for c in excerpt if c not in '"')
         excerpt = re.sub('"', '', excerpt)
         excerpt = re.sub('#', '', excerpt)        
+        excerpt = re.sub('\n', '', excerpt)        
         logger.info(f"excerpt(quotation removed): {excerpt}")
 
         name = name[name.rfind('/')+1:]
