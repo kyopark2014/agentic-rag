@@ -229,10 +229,12 @@ def get_chat():
 
     LLM_for_chat = get_multimodal_info()
 
-    print(f'selected_chat: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+    print(f'selected_chat: {selected_chat}, model_name: {model_name}')
+    
     profile = LLM_for_chat[selected_chat]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
+    print(f'selected_chat: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
                               
     # bedrock   
     boto3_bedrock = boto3.client(
