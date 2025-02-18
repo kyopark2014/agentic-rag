@@ -48,7 +48,7 @@ enableContexualRetrieval = 'Disable'
 model_name = "Nova Pro"
 multi_region = 'Enable'
 
-def get_multimodal_info():
+def get_multimodal_info(model):
     nova_pro_models = [   # Nova Pro
         {   
             "bedrock_region": "us-west-2", # Oregon
@@ -152,15 +152,15 @@ def get_multimodal_info():
         }
     ]
 
-    if model_name == 'Nova Pro':
+    if model == 'Nova Pro':
         return nova_pro_models
-    elif model_name == 'Nova Lite':
+    elif model == 'Nova Lite':
         return nova_lite_models
-    elif model_name == 'Claude 3.5 Sonnet':
+    elif model == 'Claude 3.5 Sonnet':
         return claude_sonnet_3_5_v2_models  # claude_sonnet_3_5_v1_models
-    elif model_name == 'Claude 3.0 Sonnet':
+    elif model == 'Claude 3.0 Sonnet':
         return claude_sonnet_3_0_models    
-    elif model_name == 'Claude 3.5 Haiku':
+    elif model == 'Claude 3.5 Haiku':
         return claude_haiku_3_5_models
 
 roleArn = os.environ.get('roleArn') 
@@ -227,7 +227,7 @@ def delete_document_if_exist(metadata_key):
 def get_chat():
     global selected_chat
 
-    LLM_for_chat = get_multimodal_info()
+    LLM_for_chat = get_multimodal_info(model_name)
 
     print(f'selected_chat: {selected_chat}, model_name: {model_name}')
     
@@ -273,7 +273,13 @@ def get_chat():
 def get_multimodal():
     global selected_multimodal
 
-    LLM_for_multimodal = get_multimodal_info()
+    print(f'selected_chat: {selected_chat}, model_name: {model_name}')
+
+    if model_name == 'Claude 3.5 Haiku':
+        selected_model = 'Claude 3.5 Sonnet'
+        print(f'selected_chat: {selected_chat}, selected_model_name: {selected_model}')
+
+    LLM_for_multimodal = get_multimodal_info(selected_model)
     
     profile = LLM_for_multimodal[selected_multimodal]
     bedrock_region =  profile['bedrock_region']
@@ -1378,7 +1384,7 @@ def summarize_relevant_codes_using_parallel_processing(codes, key):
             
         chat = get_chat()
 
-        LLM_for_chat = get_multimodal_info()
+        LLM_for_chat = get_multimodal_info(model_name)
         region_name = LLM_for_chat[selected_chat]['bedrock_region']
 
         process = Process(target=summarize_process_for_relevent_code, args=(child_conn, chat, code, key, region_name))
