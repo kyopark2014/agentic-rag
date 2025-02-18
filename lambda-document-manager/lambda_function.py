@@ -58,7 +58,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "nova",
-            "model_id": "amazon.nova-pro-v1:0"
+            "model_id": "us.amazon.nova-pro-v1:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
@@ -76,7 +76,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "nova",
-            "model_id": "amazon.nova-pro-v1:0"
+            "model_id": "us.amazon.nova-pro-v1:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
@@ -143,7 +143,7 @@ def get_multimodal_info():
         {
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "claude",
-            "model_id": "anthropic.claude-3-5-haiku-20241022-v1:0"
+            "model_id": "us.anthropic.claude-3-5-haiku-20241022-v1:0"
         },
         {
             "bedrock_region": "us-east-2", # Ohio
@@ -229,11 +229,11 @@ def get_chat():
 
     LLM_for_chat = get_multimodal_info()
 
+    print(f'selected_chat: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
     profile = LLM_for_chat[selected_chat]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
-    print(f'selected_chat: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
-                          
+                              
     # bedrock   
     boto3_bedrock = boto3.client(
         service_name='bedrock-runtime',
