@@ -276,8 +276,10 @@ def get_multimodal():
     print(f'selected_chat: {selected_chat}, model_name: {model_name}')
 
     if model_name == 'Claude 3.5 Haiku':
-        selected_model = 'Claude 3.5 Sonnet'
+        selected_model = 'Claude 3.5 Sonnet'  # haiku is only for text 
         print(f'selected_chat: {selected_chat}, selected_model_name: {selected_model}')
+    else:
+        selected_model = model_name
 
     LLM_for_multimodal = get_multimodal_info(selected_model)
     
