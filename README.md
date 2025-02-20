@@ -359,6 +359,22 @@ def get_contexual_docs(whole_doc, splitted_docs):
     return docs
 ```
 
+### Code Interpreter
+
+"strawberry의 r은 몇개야?"의 질문을 하면 code interpreter가 생성한 코드를 실행하여 아래와 같은 결과를 얻을 수 있습니다.
+
+![image](https://github.com/user-attachments/assets/e2d28a06-1615-42b9-b013-dd1a4a707452)
+
+이때 실행된 코드는 아래와 같습니다.
+
+```python
+os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
+word = "strawberry"
+r_count = word.count('r')
+print(f"'strawberry'에서 'r'은 {r_count}개 있습니다.")
+```
+
+
 ### Agentic RAG
 
 아래와 같이 activity diagram을 이용하여 node/edge/conditional edge로 구성되는 tool use 방식의 agent를 구현할 수 있습니다.
