@@ -361,17 +361,17 @@ def get_contexual_docs(whole_doc, splitted_docs):
 
 ### Code Interpreter
 
-"strawberry의 r은 몇개야?"의 질문을 하면 code interpreter가 생성한 코드를 실행하여 아래와 같은 결과를 얻을 수 있습니다.
+"Strawberry의 'r'은 몇개인가요?"의 질문을 하면 code interpreter가 생성한 코드를 실행하여 아래와 같은 결과를 얻을 수 있습니다.
 
-![image](https://github.com/user-attachments/assets/e2d28a06-1615-42b9-b013-dd1a4a707452)
+<img width="550" alt="image" src="https://github.com/user-attachments/assets/0b1f6ccd-618a-453b-8d63-f71bcf7ffa0b" />
 
 이때 실행된 코드는 아래와 같습니다.
 
 ```python
 os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
-word = "strawberry"
-r_count = word.count('r')
-print(f"'strawberry'에서 'r'은 {r_count}개 있습니다.")
+word = "Strawberry"
+r_count = word.lower().count(\'r\')
+print(f"\'Strawberry\'에서 \'r\'의 개수는 {r_count}개 입니다.")'
 ```
 
 LangSmith에서 확인한 동작은 아래와 같습니다.
