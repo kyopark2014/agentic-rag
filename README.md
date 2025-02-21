@@ -374,6 +374,10 @@ r_count = word.count('r')
 print(f"'strawberry'에서 'r'은 {r_count}개 있습니다.")
 ```
 
+LangSmith에서 확인한 동작은 아래와 같습니다.
+
+![noname](https://github.com/user-attachments/assets/ef3f4d7b-620b-4257-a0b9-975598b27783)
+
 
 ### Agentic RAG
 
