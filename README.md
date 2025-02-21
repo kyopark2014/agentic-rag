@@ -371,7 +371,7 @@ def get_contexual_docs(whole_doc, splitted_docs):
 os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
 word = "Strawberry"
 r_count = word.lower().count(\'r\')
-print(f"\'Strawberry\'에서 \'r\'의 개수는 {r_count}개 입니다.")'
+print(f"\'Strawberry\'에서 \'r\'의 개수는 {r_count}개 입니다.")
 ```
 
 LangSmith에서 확인한 동작은 아래와 같습니다.
