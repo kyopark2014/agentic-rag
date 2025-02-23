@@ -359,7 +359,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
         tavily_api_key: cdk.SecretValue.unsafePlainText(''),
       },
     });
-    tavilyApiSecret.grantRead(ec2Role) 
+    tavilyApiSecret.grantRead(ec2Role)  
 
     const codeInterpreterSecret = new secretsmanager.Secret(this, `code-interpreter-secret-for-${projectName}`, {
       description: 'secret for code interpreter api key', // code interpreter
@@ -389,11 +389,22 @@ export class CdkAgenticRagStack extends cdk.Stack {
       }),
     );     
 
+    // Cost Explorer Policy
+    const costExplorerPolicy = new iam.PolicyStatement({  
+      resources: ['*'],
+      actions: ['ce:GetCostAndUsage'],
+    });        
+    ec2Role.attachInlinePolicy( // add costExplorerPolicy
+      new iam.Policy(this, `cost-explorer-policy-for-${projectName}`, {
+        statements: [costExplorerPolicy],
+      }),
+    );       
+
     const ec2Policy = new iam.PolicyStatement({  
       resources: ['arn:aws:ec2:*:*:instance/*'],
       actions: ['ec2:*'],
     });
-    ec2Role.attachInlinePolicy( // add bedrock policy
+    ec2Role.attachInlinePolicy( // add ec2 policy
       new iam.Policy(this, `ec2-policy-for-${projectName}`, {
         statements: [ec2Policy],
       }),
