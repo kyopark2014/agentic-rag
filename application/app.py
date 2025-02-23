@@ -253,7 +253,7 @@ if clear_button==False and mode == '비용 분석':
             cost.cost_data = cost_data
         else:
             if not cost.insights:        
-                st.info("잠시만 기다리세요. 지난 한달간의 사용량을 분삭하고 있습니다...")
+                st.info("잠시만 기다리세요. 지난 한달간의 사용량을 분석하고 있습니다...")
                 insights = cost.generate_cost_insights()
                 logger.info(f"insights: {insights}")
                 cost.insights = insights
