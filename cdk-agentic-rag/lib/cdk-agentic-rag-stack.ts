@@ -339,8 +339,8 @@ export class CdkAgenticRagStack extends cdk.Stack {
     });
     weatherApiSecret.grantRead(ec2Role) 
 
-    const langsmithApiSecret = new secretsmanager.Secret(this, `weather-langsmith-secret-for-${projectName}`, {
-      description: 'secret for lamgsmith api key', // openweathermap
+    const langsmithApiSecret = new secretsmanager.Secret(this, `langsmith-secret-for-${projectName}`, {
+      description: 'secret for lamgsmith api key', // langsmith
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       secretName: `langsmithapikey-${projectName}`,
       secretObjectValue: {
@@ -350,8 +350,8 @@ export class CdkAgenticRagStack extends cdk.Stack {
     });
     langsmithApiSecret.grantRead(ec2Role) 
 
-    const tavilyApiSecret = new secretsmanager.Secret(this, `weather-tavily-secret-for-${projectName}`, {
-      description: 'secret for lamgsmith api key', // openweathermap
+    const tavilyApiSecret = new secretsmanager.Secret(this, `tavily-secret-for-${projectName}`, {
+      description: 'secret for tavily api key', // tavily
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       secretName: `tavilyapikey-${projectName}`,
       secretObjectValue: {

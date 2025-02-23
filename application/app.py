@@ -261,7 +261,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
 
         elif mode == 'Agentic RAG':
             with st.status("thinking...", expanded=True, state="running") as status:
-                response, image_url, reference_docs = tool_use.run_agent_executor(prompt, st)
+                response, image_url, reference_docs = tool_use.run_agent_executor(prompt, "Disable", st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 
@@ -284,8 +284,9 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         
         elif mode == 'Agentic RAG (Chat)':
             with st.status("thinking...", expanded=True, state="running") as status:
-                revise_prompt = chat.revise_question(prompt, st)
-                response, image_url, reference_docs = tool_use.run_agent_executor(revise_prompt, st)
+                # revise_prompt = chat.revise_question(prompt, st)
+                # response, image_url, reference_docs = tool_use.run_agent_executor(revise_prompt, "Enable", st)
+                response, image_url, reference_docs = tool_use.run_agent_executor(prompt, "Enable", st)
                 st.write(response)
                 logger.info(f"response: {response}")
                 

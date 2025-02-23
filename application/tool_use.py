@@ -368,7 +368,7 @@ def code_interpreter(code):
 
 tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, code_interpreter]
 
-def run_agent_executor(query, st):
+def run_agent_executor(query, historyMode, st):
     chatModel = chat.get_chat()     
     model = chatModel.bind_tools(tools)
 
@@ -502,6 +502,27 @@ def run_agent_executor(query, st):
 
         return workflow.compile()
 
+    def buildChatAgentWithHistory():
+        workflow = StateGraph(State)
+
+        workflow.add_node("agent", call_model)
+        workflow.add_node("action", tool_node)
+        workflow.add_edge(START, "agent")
+        workflow.add_conditional_edges(
+            "agent",
+            should_continue,
+            {
+                "continue": "action",
+                "end": END,
+            },
+        )
+        workflow.add_edge("action", "agent")
+
+        return workflow.compile(
+            checkpointer=chat.checkpointer,
+            store=chat.memorystore
+        )
+
     # initiate
     global reference_docs, contentList, image_url
     reference_docs = []
@@ -509,19 +530,33 @@ def run_agent_executor(query, st):
     image_url = []
 
     # workflow 
-    app = buildChatAgent()
-            
     inputs = [HumanMessage(content=query)]
-    config = {
-        "recursion_limit": 50
-    }
-    
+    if historyMode == "Enable":
+        app = buildChatAgentWithHistory()
+        config = {
+            "recursion_limit": 50,
+            "configurable": {"thread_id": chat.userId}
+        }
+    else:
+        app = buildChatAgent()
+        config = {
+            "recursion_limit": 50
+        }
+        
     # msg = message.content
     result = app.invoke({"messages": inputs}, config)
     #print("result: ", result)
 
     msg = result["messages"][-1].content
     logger.info(f"msg: {msg}")
+
+    if historyMode == "Enable":
+        snapshot = app.get_state(config)
+        # logger.info(f"snapshot.values: {snapshot.values}")
+        messages = snapshot.values["messages"]
+        for i, m in enumerate(messages):
+            logger.info(f"{i} --> {m.content}")
+        logger.info(f"userId: {chat.userId}")
 
     for i, doc in enumerate(reference_docs):
         logger.info(f"--> reference {i}: {doc}")
