@@ -209,16 +209,22 @@ def generate_cost_insights():
 cost_data = {}
 visualizations = {}
 insights = ""
-try:
-    cost_data = get_cost_analysis()
-    if cost_data:
-        logger.info(f"No cost data available")
 
-        # draw visualizations        
-        visualizations = create_cost_visualizations(cost_data)
+def get_visualiation():
+    global cost_data, visualizations
 
-except Exception as e:
-    print(f"Error to earn cost data: {str(e)}")
+    try:
+        cost_data = get_cost_analysis()
+        if cost_data:
+            logger.info(f"No cost data available")
+
+            # draw visualizations        
+            visualizations = create_cost_visualizations(cost_data)
+
+    except Exception as e:
+        print(f"Error to earn cost data: {str(e)}")   
+
+get_visualiation() 
 
 def ask_cost_insights(question):
     if cost_data:

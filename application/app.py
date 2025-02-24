@@ -121,6 +121,8 @@ st.title('🔮 '+ mode)
 
 if clear_button==True:
     chat.initiate()
+    cost.cost_data = {}
+    cost.visualizations = {}
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -237,6 +239,9 @@ if uploaded_file and clear_button==False and mode == '이미지 분석':
 
 if clear_button==False and mode == '비용 분석':
     st.subheader("📈 Cost Analysis")
+
+    if not cost.visualizations:
+        cost.get_visualiation()
 
     if 'service_pie' in cost.visualizations:
         st.plotly_chart(cost.visualizations['service_pie'])
