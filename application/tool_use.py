@@ -475,7 +475,7 @@ def run_agent_executor(query, historyMode, st):
                                 logger.info(f"--> {re['type']}: {re['name']}, {re['input']}")
 
                                 if chat.debug_mode=="Enable":
-                                    utils.status(f"{re['type']}: {re['name']}, {re['input']}")
+                                    utils.status(st, f"{re['type']}: {re['name']}, {re['input']}")
                             else:
                                 print(re)
                                 logger.info(f"{re}")
