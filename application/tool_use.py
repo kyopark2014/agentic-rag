@@ -202,9 +202,9 @@ def search_by_tavily(keyword: str) -> str:
 @tool
 def stock_data_lookup(ticker, country):
     """
-    Retrieve accurate stock trends for a given ticker.
-    ticker: the ticker to retrieve price history for
+    Retrieve accurate stock data for a given ticker.
     country: the english country name of the stock
+    ticker: the ticker to retrieve price history for. In South Korea, ticker should be 6 digit numbers.
     return: the information of ticker
     """ 
     com = re.compile('[a-zA-Z]') 
@@ -287,8 +287,7 @@ print(image_base64)
             }
         )
         output = dict(resp)
-
-        print(f"output: {output}") # includling exit_code, stdout, stderr
+        # print(f"output: {output}") # includling exit_code, stdout, stderr
 
         if resp.exit_code > 0:
             logger.debug(f"non-zero exit code {resp.exit_code}")
@@ -302,11 +301,11 @@ print(image_base64)
         logger.info(f"url: {url}")
 
         file_name = url[url.rfind('/')+1:]
-        print(f"file_name: {file_name}")
+        logger.info(f"file_name: {file_name}")
 
         global image_url
         image_url.append(chat.path+'/'+chat.s3_image_prefix+'/'+parse.quote(file_name))
-        print(f"image_url: {image_url}")
+        logger.info(f"image_url: {image_url}")
 
         result = f"생성된 그래프의 URL: {image_url}"
 
