@@ -209,7 +209,7 @@ def stock_data_lookup(ticker, country):
     """ 
     com = re.compile('[a-zA-Z]') 
     alphabet = com.findall(ticker)
-    logger.info(f"alphabet: {alphabet}")
+    # logger.info(f"alphabet: {alphabet}")
 
     logger.info(f"country: {country}")
 
