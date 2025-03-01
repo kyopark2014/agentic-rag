@@ -397,15 +397,23 @@ def run_agent_executor(query, historyMode, st):
             logger.info(f"tool_calls: {last_message.tool_calls}")
 
             for message in last_message.tool_calls:
-                logger.info(f"tool name: {message['name']}, args: {message['args']}")
-                # update_state_message(f"calling... {message['name']}", config)
+                args = message['args']
+                if chat.debug_mode=='Enable': 
+                    if "code" in args:                    
+                        state_msg = f"tool name: {message['name']}"
+                        utils.status(st, state_msg)                    
+                        utils.stcode(st, args['code'])
+                    
+                    elif chat.model_type=='claude':
+                        state_msg = f"tool name: {message['name']}, args: {message['args']}"
+                        utils.status(st, state_msg)
 
             logger.info(f"--- CONTINUE: {last_message.tool_calls[-1]['name']} ---")
             return "continue"
         
         #if not last_message.tool_calls:
         else:
-            logger.info(f"Final: {last_message.content}")
+            # logger.info(f"Final: {last_message.content}")
             logger.info(f"--- END ---")
             return "end"
            
@@ -461,13 +469,13 @@ def run_agent_executor(query, historyMode, st):
                                     logger.info(f"tatus without tag: {status}")
 
                                 if chat.debug_mode=="Enable":
-                                    st.info(status)
+                                    utils.status(st, status)
                                 
                             elif re['type'] == 'tool_use':                
                                 logger.info(f"--> {re['type']}: {re['name']}, {re['input']}")
 
                                 if chat.debug_mode=="Enable":
-                                    st.info(f"{re['type']}: {re['name']}, {re['input']}")
+                                    utils.status(f"{re['type']}: {re['name']}, {re['input']}")
                             else:
                                 print(re)
                                 logger.info(f"{re}")
