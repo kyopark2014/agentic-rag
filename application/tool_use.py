@@ -204,7 +204,7 @@ def stock_data_lookup(ticker, country):
     """
     Retrieve accurate stock data for a given ticker.
     country: the english country name of the stock
-    ticker: the ticker to retrieve price history for. In South Korea, ticker is 6 digit numbers.
+    ticker: the ticker to retrieve price history for. In South Korea, a ticker is a 6-digit number.
     return: the information of ticker
     """ 
     com = re.compile('[a-zA-Z]') 
