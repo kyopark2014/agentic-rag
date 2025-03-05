@@ -82,7 +82,7 @@ def get_weather_info(city: str) -> str:
     city = city.replace('\'','')
     city = city.replace('\"','')
                 
-    llm = chat.get_chat()
+    llm = chat.get_chat(extended_thinking="Disable")
     if chat.isKorean(city):
         place = chat.traslation(llm, city, "Korean", "English")
         logger.info(f"city (translated): ", place)
@@ -368,7 +368,7 @@ def code_interpreter(code):
 tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, code_interpreter]
 
 def run_agent_executor(query, historyMode, st):
-    chatModel = chat.get_chat()     
+    chatModel = chat.get_chat(chat.reasoning_mode)     
     model = chatModel.bind_tools(tools)
 
     class State(TypedDict):
@@ -447,6 +447,10 @@ def run_agent_executor(query, historyMode, st):
                     
                 response = chain.invoke(state["messages"])
                 logger.info(f"all_model response: {response}")
+
+                # extended thinking
+                if chat.debug_mode=="Enable":
+                    chat.show_extended_thinking(st, response)
 
                 if isinstance(response.content, list):            
                     for re in response.content:

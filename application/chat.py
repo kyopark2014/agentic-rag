@@ -147,9 +147,10 @@ models = info.get_model_info(model_name)
 number_of_models = len(models)
 selected_chat = 0
 
-def update(modelName, debugMode, multiRegion, contextualEmbedding):    
+reasoning_mode = 'Disable'
+def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode):    
     global model_name, debug_mode, multi_region, contextual_embedding     
-    global selected_chat, selected_embedding, models, number_of_models
+    global selected_chat, selected_embedding, models, number_of_models, reasoning_mode
     
     if model_name != modelName:
         model_name = modelName
@@ -175,6 +176,9 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding):
         contextual_embedding = contextualEmbedding
         logger.info(f"contextual_embedding: {contextual_embedding}")
 
+    reasoning_mode = "Enable" if reasoningMode=="Enable" else "Disable"
+    logger.info(f"reasoning_mode: {reasoning_mode}")
+
 def clear_chat_history():
     memory_chain = []
     map_chain[userId] = memory_chain
@@ -186,7 +190,7 @@ def save_chat_history(text, msg):
     else:
         memory_chain.chat_memory.add_ai_message(msg) 
 
-def get_chat():
+def get_chat(extended_thinking):
     global selected_chat, model_type
 
     profile = models[selected_chat]
@@ -216,14 +220,28 @@ def get_chat():
             }
         )
     )
-    parameters = {
-        "max_tokens":maxOutputTokens,     
-        "temperature":0.1,
-        "top_k":250,
-        "top_p":0.9,
-        "stop_sequences": [STOP_SEQUENCE]
-    }
-    # print('parameters: ', parameters)
+    if extended_thinking=='Enable':
+        maxReasoningOutputTokens=64000
+        logger.info(f"extended_thinking: {extended_thinking}")
+        thinking_budget = min(maxOutputTokens, maxReasoningOutputTokens-1000)
+
+        parameters = {
+            "max_tokens":maxReasoningOutputTokens,
+            "temperature":1,            
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": thinking_budget
+            },
+            "stop_sequences": [STOP_SEQUENCE]
+        }
+    else:
+        parameters = {
+            "max_tokens":maxOutputTokens,     
+            "temperature":0.1,
+            "top_k":250,
+            "top_p":0.9,
+            "stop_sequences": [STOP_SEQUENCE]
+        }
 
     chat = ChatBedrock(   # new chat model
         model_id=modelId,
@@ -240,6 +258,13 @@ def get_chat():
         selected_chat = 0
 
     return chat
+
+def show_extended_thinking(st, result):
+    # logger.info(f"result: {result}")
+    if "thinking" in result.response_metadata:
+        if "text" in result.response_metadata["thinking"]:
+            thinking = result.response_metadata["thinking"]["text"]
+            st.info(thinking)
 
 def get_parallel_processing_chat(models, selected):
     global model_type
@@ -569,7 +594,7 @@ def grade_documents(question, documents):
 
         else:
             # Score each doc    
-            llm = get_chat()
+            llm = get_chat(extended_thinking="Disable")
             retrieval_grader = get_retrieval_grader(llm)
             for i, doc in enumerate(documents):
                 # print('doc: ', doc)
@@ -726,7 +751,7 @@ def load_csv_document(s3_file_name):
     return docs
 
 def get_summary(docs):    
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
 
     text = ""
     for doc in docs:
@@ -819,7 +844,7 @@ def summary_of_code(code, mode):
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     # print('prompt: ', prompt)
     
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
 
     chain = prompt | llm    
     try: 
@@ -839,7 +864,7 @@ def summary_of_code(code, mode):
     return summary
 
 def summary_image(img_base64, instruction):      
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
 
     if instruction:
         logger.info(f"instruction: {instruction}")
@@ -879,7 +904,7 @@ def summary_image(img_base64, instruction):
     return extracted_text
 
 def extract_text(img_base64):    
-    multimodal = get_chat()
+    multimodal = get_chat(extended_thinking="Disable")
     query = "텍스트를 추출해서 markdown 포맷으로 변환하세요. <result> tag를 붙여주세요."
     
     messages = [
@@ -1048,7 +1073,7 @@ def get_summary_of_uploaded_file(file_name, st):
 def revise_question(query, st):    
     logger.info(f"###### revise_question ######")
 
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
     st.info("히스토리를 이용해 질문을 변경합니다.")
         
     if isKorean(query)==True :      
@@ -1112,7 +1137,7 @@ def revise_question(query, st):
 # General Conversation
 #########################################################
 def general_conversation(query):
-    llm = get_chat()
+    llm = get_chat(reasoning_mode)
 
     system = (
         "당신의 이름은 서연이고, 질문에 대해 친절하게 답변하는 사려깊은 인공지능 도우미입니다."
@@ -1130,21 +1155,36 @@ def general_conversation(query):
                 
     history = memory_chain.load_memory_variables({})["chat_history"]
 
-    chain = prompt | llm | StrOutputParser()
     try: 
-        stream = chain.stream(
-            {
-                "history": history,
-                "input": query,
-            }
-        )  
+        if reasoning_mode == "Disable":
+            chain = prompt | llm | StrOutputParser()
+            output = chain.stream(
+                {
+                    "history": history,
+                    "input": query,
+                }
+            )  
+            response = output
+        else:
+            # output = llm.invoke(query)
+            # logger.info(f"output: {output}")
+            # response = output.content
+            chain = prompt | llm
+            output = chain.invoke(
+                {
+                    "history": history,
+                    "input": query,
+                }
+            )
+            logger.info(f"output: {output}")
+            response = output
             
     except Exception:
         err_msg = traceback.format_exc()
         logger.info(f"error message: {err_msg}")        
         raise Exception ("Not able to request to LLM: "+err_msg)
         
-    return stream
+    return response
 
 ####################### LangChain #######################
 # Basic RAG (OpenSearch)
@@ -1184,7 +1224,7 @@ def get_embedding():
 
 def get_rag_prompt(text):
     # print("###### get_rag_prompt ######")
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
     # print('model_type: ', model_type)
     
     if model_type == "nova":
@@ -1279,6 +1319,10 @@ def get_answer_using_opensearch(text, st):
         )
         logger.info(f"result: {result}")
 
+        # extended thinking
+        if debug_mode=="Enable":
+            show_extended_thinking(st, result)
+
         msg = result.content        
         if msg.find('<result>')!=-1:
             msg = msg[msg.find('<result>')+8:msg.find('</result>')]
@@ -1305,7 +1349,7 @@ def get_rewrite():
 
         question: str = Field(description="The new question is optimized to represent semantic intent and meaning of the user")
     
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
     structured_llm_rewriter = llm.with_structured_output(RewriteQuestion)
     
     logger.info(f"isKorPrompt: {isKorPrompt}")
@@ -1348,7 +1392,7 @@ def get_hallucination_grader():
         ]
     )
         
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
     structured_llm_grade_hallucination = llm.with_structured_output(GradeHallucinations)
         
     hallucination_grader = hallucination_prompt | structured_llm_grade_hallucination
@@ -1394,7 +1438,7 @@ def run_corrective_rag(query, st):
                     web_search = "Yes"
 
             else:    
-                llm = get_chat()
+                llm = get_chat(extended_thinking="Disable")
                 retrieval_grader = get_retrieval_grader(llm)
                 for doc in documents:
                     score = retrieval_grader.invoke({"question": question, "document": doc.page_content})
@@ -1579,7 +1623,7 @@ def get_answer_grader():
             description="Answer addresses the question, 'yes' or 'no'"
         )
         
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
     structured_llm_grade_answer = llm.with_structured_output(GradeAnswer)
         
     system = (
@@ -1668,7 +1712,7 @@ def run_self_rag(query, st):
             else:    
                 # Score each doc
                 filtered_docs = []
-                llm = get_chat()
+                llm = get_chat(extended_thinking="Disable")
                 retrieval_grader = get_retrieval_grader(llm)
                 for doc in documents:
                     score = retrieval_grader.invoke({"question": question, "document": doc.page_content})
@@ -2123,7 +2167,7 @@ def translate_text(text, model_name):
     global llmMode
     llmMode = model_name
 
-    llm = get_chat()
+    llm = get_chat(extended_thinking="Disable")
 
     system = (
         "You are a helpful assistant that translates {input_language} to {output_language} in <article> tags. Put it in <result> tags."

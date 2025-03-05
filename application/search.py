@@ -189,7 +189,7 @@ def tavily_search(query, k):
     return docs
 
 def init_enhanced_search(st):
-    llm = chat.get_chat() 
+    llm = chat.get_chat(extended_thinking="Disable") 
 
     model = llm.bind_tools(tool_use.tools)
 

@@ -54,7 +54,7 @@ def extract_reflection(draft):
     search_queries = []
     for attempt in range(5):
         try:
-            llm = chat.get_chat()
+            llm = chat.get_chat(extended_thinking="Disable")
             if chat.isKorean(draft):
                 structured_llm = llm.with_structured_output(Research, include_raw=True)
             else:
@@ -96,7 +96,7 @@ def extract_reflection2(draft):
     reflection = ""
     for attempt in range(5):
         try:
-            llm = chat.get_chat()
+            llm = chat.get_chat(extended_thinking="Disable")
             chain = critique_prompt | llm
             result = chain.invoke({
                 "draft": draft
@@ -143,7 +143,7 @@ def extract_reflection2(draft):
     )
     for attempt in range(5):
         try:
-            llm = chat.get_chat()
+            llm = chat.get_chat(extended_thinking="Disable")
             if chat.isKorean(draft):
                 structured_llm_queries = llm.with_structured_output(QueriesKor, include_raw=True)
             else:
@@ -260,7 +260,7 @@ def run_reflection(query, st):
         }
     
     def get_revise_prompt(text):
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
 
         if chat.isKorean(text):
             system = (
@@ -447,7 +447,7 @@ def run_reflection(query, st):
 #########################################################
 
 def init_enhanced_search(st):
-    llm = chat.get_chat() 
+    llm = chat.get_chat(extended_thinking="Disable") 
 
     model = llm.bind_tools(tool_use.tools)
 
@@ -618,7 +618,7 @@ def run_knowledge_guru(query, st):
         search_queries = []
         for attempt in range(5):
             try:
-                chat = chat.get_chat()
+                chat = chat.get_chat(extended_thinking="Disable")
                 if chat.isKorean(state["messages"][-1].content):
                     structured_llm = chat.with_structured_output(ResearchKor, include_raw=True)
                 else:
@@ -651,7 +651,7 @@ def run_knowledge_guru(query, st):
         }
     
     def get_revise_prompt(text):
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
 
         if chat.isKorean(text):
             system = (

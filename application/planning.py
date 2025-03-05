@@ -50,7 +50,7 @@ def run_planning(query, st):
                 ("human", human),
             ]
         )
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
         planner = planner_prompt | llm
         response = planner.invoke({
             "question": state["input"]
@@ -107,7 +107,7 @@ def run_planning(query, st):
         prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
         # print('prompt: ', prompt)
                         
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
         chain = prompt | llm
         
         response = chain.invoke({
@@ -130,7 +130,7 @@ def run_planning(query, st):
         plan = state["plan"]
         logger.info(f"plan: {plan}")
         
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
 
         if chat.debug_mode=="Enable":
             st.info(f"검색을 수행합니다. 검색어 {plan[0]}")
@@ -219,7 +219,7 @@ def run_planning(query, st):
             ]
         )     
         
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
         replanner = replanner_prompt | llm
         
         response = replanner.invoke({
@@ -298,7 +298,7 @@ def run_planning(query, st):
         prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
         # print('prompt: ', prompt)
                     
-        llm = chat.get_chat()
+        llm = chat.get_chat(extended_thinking="Disable")
         chain = prompt | llm
         
         try: 
@@ -309,6 +309,10 @@ def run_planning(query, st):
                 }
             )
             result = response.content
+
+            # extended thinking
+            if chat.debug_mode=="Enable":
+                chat.show_extended_thinking(st, response)
 
             if result.find('<result>')==-1:
                 output = result
