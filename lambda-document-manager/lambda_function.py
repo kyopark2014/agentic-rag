@@ -48,9 +48,12 @@ model_name = "default"
 multi_region = 'Disable'
 
 def get_model_info(model):
-    if model is not model_name:
+    if model != model_name:
         global selected_model
         selected_model = 0
+
+        global model_name
+        model_name = model
 
     nova_pro_models = [   # Nova Pro
         {   
@@ -293,6 +296,11 @@ def get_model():
     LLM_for_chat = get_model_info(model_name)
 
     print(f'selected_model: {selected_model}, model_name: {model_name}')
+
+    if len(LLM_for_chat) >= selected_model: # exceptional case
+        print(f"# of models: {len(LLM_for_chat)}, selected_model: {selected_model}")    
+        print('------> selected_model is initiated')
+        selected_model = 0
     
     profile = LLM_for_chat[selected_model]
     bedrock_region =  profile['bedrock_region']
@@ -326,7 +334,7 @@ def get_model():
     
     if multi_region == "Enable":
         selected_model = selected_model + 1
-        if selected_model == len(LLM_for_chat):
+        if selected_model >= len(LLM_for_chat):
             selected_model = 0
     else:
         selected_model = 0
@@ -624,7 +632,7 @@ def get_contextual_docs(whole_doc, splitted_docs):
         ('human', contextual_template)
     ])
 
-    docs = []
+    contexualized_docs = []
     contexualized_chunks = []
     for i, doc in enumerate(splitted_docs):
         # chat = get_contexual_retrieval_chat()
@@ -646,13 +654,13 @@ def get_contextual_docs(whole_doc, splitted_docs):
         print(f"--> {i}: original_chunk: {doc.page_content}")
         print(f"--> {i}: contexualized_chunk: {contextualized_chunk}")
         
-        docs.append(
+        contexualized_docs.append(
             Document(
-                page_content=contextualized_chunk+"\n\n"+doc.page_content,
+                page_content="\n"+contextualized_chunk+"\n\n"+doc.page_content,
                 metadata=doc.metadata
             )
         )
-    return docs, contexualized_chunks
+    return contexualized_docs, contexualized_chunks
 
 def add_to_opensearch(docs, key):    
     if len(docs) == 0:
@@ -680,13 +688,13 @@ def add_to_opensearch(docs, key):
             length_function = len,
         )
 
-        parent_docs = parent_splitter.split_documents(docs)
-        print('len(parent_docs): ', len(parent_docs))
+        splitted_docs = parent_splitter.split_documents(docs)
+        print('len(splitted_docs): ', len(splitted_docs))
 
-        print('parent chunk[0]: ', parent_docs[0].page_content)
+        print('splitted_docs[0]: ', splitted_docs[0].page_content)
 
         if contextual_embedding == 'Enable':
-            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], parent_docs)
+            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
             print('parent contextual chunk[0]: ', parent_docs[0].page_content)
 
         if len(parent_docs):
@@ -712,15 +720,15 @@ def add_to_opensearch(docs, key):
                     print('sub_docs[0]: ', sub_docs[0].page_content)
 
                     if contextual_embedding == 'Enable':
-                        docs = []
-                        for doc in sub_docs:
-                            docs.append(
+                        contexualized_docs = [] # contexualized child doc
+                        for _doc in sub_docs:
+                            contexualized_docs.append(
                                 Document(
-                                    page_content=contexualized_chunks[i]+"\n\n"+doc.page_content,
-                                    metadata=doc.metadata
+                                    page_content=contexualized_chunks[i]+"\n\n"+_doc.page_content,
+                                    metadata=_doc.metadata
                                 )
                             )
-                        sub_docs = docs                    
+                        sub_docs = contexualized_docs
                 
                     child_doc_ids = vectorstore.add_documents(sub_docs, bulk_size = 10000)
                     print('child_doc_ids: ', child_doc_ids)
@@ -739,13 +747,13 @@ def add_to_opensearch(docs, key):
             length_function = len,
         ) 
         
-        documents = text_splitter.split_documents(docs)
-        print('len(documents): ', len(documents))
+        splitted_docs = text_splitter.split_documents(docs)
+        print('len(splitted_docs): ', len(splitted_docs))
 
-        if len(documents):
-            if contextual_embedding == 'Enable':                        
-                print('chunk[0]: ', documents[0].page_content)             
-                documents, contexualized_chunks = get_contextual_docs(docs[-1], documents)
+        if len(splitted_docs):
+            if contextual_embedding == 'Enable':
+                print('chunk[0]: ', splitted_docs[0].page_content)
+                documents, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
                 print('contextual chunks[0]: ', contexualized_chunks[0])  
             else:
                 print('documents[0]: ', documents[0])
