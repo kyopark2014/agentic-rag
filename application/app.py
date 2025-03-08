@@ -87,7 +87,7 @@ with st.sidebar:
         st.subheader("🌇 이미지 업로드")
         uploaded_file = st.file_uploader("이미지 요약을 위한 파일을 선택합니다.", type=["png", "jpg", "jpeg"])
 
-    elif mode=='RAG' or mode=="Agentic RAG" or mode=="Corrective RAG" or mode=="Self RAG" or mode=="Self Corrective RAG":
+    elif mode=='RAG' or mode=="Agentic RAG" or mode=="Agentic RAG (Chat)" or mode=="Corrective RAG" or mode=="Self RAG" or mode=="Self Corrective RAG":
         logger.info(f"fileId: {chat.fileId}")
         uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
 
@@ -218,7 +218,7 @@ if uploaded_file and clear_button==False and not mode == '이미지 분석':
             st.info(status)
 
         file_name = uploaded_file.name
-        file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+        file_url = chat.upload_to_s3(uploaded_file.getvalue(), file_name)
         logger.info(f"file_url: {file_url}")
             
         status = f'선택한 "{file_name}"의 내용을 요약합니다.'
@@ -239,7 +239,7 @@ if uploaded_file and clear_button==False and mode == '이미지 분석':
     st.image(uploaded_file, caption="이미지 미리보기", use_container_width=True)
 
     file_name = uploaded_file.name
-    url = chat.upload_to_s3(uploaded_file.getvalue(), file_name, contextualEmbedding)
+    url = chat.upload_image_to_s3(uploaded_file.getvalue(), file_name)
     logger.info(f"url: {url}")
 
 if clear_button==False and mode == '비용 분석':

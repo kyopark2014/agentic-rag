@@ -420,7 +420,7 @@ def traslation(chat, text, input_language, output_language):
 
     return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
 
-def upload_to_s3(file_bytes, file_name, contextual_embedding):
+def upload_to_s3(file_bytes, file_name):
     """
     Upload a file to S3 and return the URL
     """
@@ -2222,7 +2222,7 @@ def get_image_summarization(object_name, prompt, st):
         logger.info(f"status: {status}")
         st.info(status)
                 
-    image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_prefix+'/'+object_name)
+    image_obj = s3_client.get_object(Bucket=s3_bucket, Key=s3_image_prefix+'/'+object_name)
     # print('image_obj: ', image_obj)
     
     image_content = image_obj['Body'].read()

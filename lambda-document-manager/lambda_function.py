@@ -39,16 +39,19 @@ opensearch_url = os.environ.get('opensearch_url')
 sqsUrl = os.environ.get('sqsUrl')
 doc_prefix = s3_prefix+'/'
 LLM_embedding = json.loads(os.environ.get('LLM_embedding'))
-selected_chat = 0
-selected_multimodal = 0
+selected_model = 0
 selected_embedding = 0
 maxOutputTokens = 4096
-enableContexualRetrieval = 'Disable'
+contextual_embedding = 'Disable'
 
-model_name = "Nova Pro"
-multi_region = 'Enable'
+model_name = "default"
+multi_region = 'Disable'
 
-def get_multimodal_info(model):
+def get_model_info(model):
+    if model is not model_name:
+        global selected_model
+        selected_model = 0
+
     nova_pro_models = [   # Nova Pro
         {   
             "bedrock_region": "us-west-2", # Oregon
@@ -152,16 +155,76 @@ def get_multimodal_info(model):
         }
     ]
 
+    claude_3_7_sonnet_models = [   # Sonnet 3.7
+        {
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        }
+    ]
+
+    claude_models = [
+        {   # Claude 3.7 Sonnet
+            "bedrock_region": "us-west-2", # Oregon   
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {   # Claude 3.5 Sonnet v1
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        {   # Claude 3.5 Sonnet v2
+            "bedrock_region": "us-west-2", # Oregon
+            "model_type": "claude",
+            "model_id": "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        },
+        {
+            "bedrock_region": "us-east-1", # N.Virginia
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # Ohio
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+        }
+    ]
+
     if model == 'Nova Pro':
         return nova_pro_models
     elif model == 'Nova Lite':
         return nova_lite_models
+    elif model == 'Claude 3.7 Sonnet':
+        return claude_3_7_sonnet_models 
     elif model == 'Claude 3.5 Sonnet':
         return claude_sonnet_3_5_v2_models  # claude_sonnet_3_5_v1_models
     elif model == 'Claude 3.0 Sonnet':
         return claude_sonnet_3_0_models    
     elif model == 'Claude 3.5 Haiku':
-        return claude_haiku_3_5_models
+        return claude_models
+    else:
+        return claude_models
 
 roleArn = os.environ.get('roleArn') 
 path = os.environ.get('path')
@@ -224,17 +287,17 @@ def delete_document_if_exist(metadata_key):
         print('error message: ', err_msg)        
         raise Exception ("Not able to create meta file")
 
-def get_chat():
-    global selected_chat
+def get_model():
+    global selected_model
 
-    LLM_for_chat = get_multimodal_info(model_name)
+    LLM_for_chat = get_model_info(model_name)
 
-    print(f'selected_chat: {selected_chat}, model_name: {model_name}')
+    print(f'selected_model: {selected_model}, model_name: {model_name}')
     
-    profile = LLM_for_chat[selected_chat]
+    profile = LLM_for_chat[selected_model]
     bedrock_region =  profile['bedrock_region']
     modelId = profile['model_id']
-    print(f'selected_chat: {selected_chat}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+    print(f'selected_model: {selected_model}, bedrock_region: {bedrock_region}, modelId: {modelId}')
                               
     # bedrock   
     boto3_bedrock = boto3.client(
@@ -255,72 +318,20 @@ def get_chat():
     }
     # print('parameters: ', parameters)
 
-    chat = ChatBedrock(   # new chat model
+    llm = ChatBedrock(   # new chat model
         model_id=modelId,
         client=boto3_bedrock, 
         model_kwargs=parameters,
     )    
     
     if multi_region == "Enable":
-        selected_chat = selected_chat + 1
-        if selected_chat == len(LLM_for_chat):
-            selected_chat = 0
+        selected_model = selected_model + 1
+        if selected_model == len(LLM_for_chat):
+            selected_model = 0
     else:
-        selected_chat = 0
+        selected_model = 0
         
-    return chat
-
-def get_multimodal():
-    global selected_multimodal
-
-    print(f'selected_chat: {selected_chat}, model_name: {model_name}')
-
-    if model_name == 'Claude 3.5 Haiku':
-        selected_model = 'Claude 3.5 Sonnet'  # haiku is only for text 
-        print(f'selected_chat: {selected_chat}, selected_model_name: {selected_model}')
-    else:
-        selected_model = model_name
-
-    LLM_for_multimodal = get_multimodal_info(selected_model)
-    
-    profile = LLM_for_multimodal[selected_multimodal]
-    bedrock_region =  profile['bedrock_region']
-    modelId = profile['model_id']
-    print(f'LLM: {selected_multimodal}, bedrock_region: {bedrock_region}, modelId: {modelId}')
-                          
-    # bedrock   
-    boto3_bedrock = boto3.client(
-        service_name='bedrock-runtime',
-        region_name=bedrock_region,
-        config=Config(
-            retries = {
-                'max_attempts': 30
-            }
-        )
-    )
-    parameters = {
-        "max_tokens":maxOutputTokens,     
-        "temperature":0.1,
-        "top_k":250,
-        "top_p":0.9,
-        "stop_sequences": [HUMAN_PROMPT]
-    }
-    # print('parameters: ', parameters)
-
-    multimodal = ChatBedrock(   # new chat model
-        model_id=modelId,
-        client=boto3_bedrock, 
-        model_kwargs=parameters,
-    )    
-    
-    if multi_region == "Enable":
-        selected_multimodal = selected_multimodal + 1
-        if selected_multimodal == len(LLM_for_multimodal):
-            selected_multimodal = 0
-    else:
-        selected_multimodal = 0
-    
-    return multimodal
+    return llm
 
 def get_embedding():
     global selected_embedding
@@ -420,8 +431,8 @@ def store_code_for_opensearch(file_type, key):
             function_name = code[start+1:end]
             # print('function_name: ', function_name)
                                                 
-            chat = get_chat()                                              
-            summary = summary_of_code(chat, code, file_type)
+            llm = get_model()
+            summary = summary_of_code(llm, code, file_type)
                                             
             if summary[:len(function_name)]==function_name:
                 summary = summary[summary.find('\n')+1:len(summary)]
@@ -473,12 +484,12 @@ def store_image_for_opensearch(key):
         img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
                                                                 
         # extract text from the image
-        chat = get_multimodal()
-        text = extract_text(chat, img_base64)
+        llm = get_model()
+        text = extract_text(llm, img_base64)
         extracted_text = text[text.find('<result>')+8:len(text)-9] # remove <result> tag
         #print('extracted_text: ', extracted_text)
         
-        summary = summary_image(chat, img_base64)
+        summary = summary_image(llm, img_base64)
         image_summary = summary[summary.find('<result>')+8:len(summary)-9] # remove <result> tag
         #print('image summary: ', image_summary)
         
@@ -595,7 +606,7 @@ def create_nori_index():
 if enableHybridSearch == 'true':
     create_nori_index()
 
-def get_contexual_docs(whole_doc, splitted_docs):
+def get_contextual_docs(whole_doc, splitted_docs):
     contextual_template = (
         "<document>"
         "{WHOLE_DOCUMENT}"
@@ -617,9 +628,9 @@ def get_contexual_docs(whole_doc, splitted_docs):
     contexualized_chunks = []
     for i, doc in enumerate(splitted_docs):
         # chat = get_contexual_retrieval_chat()
-        chat = get_chat()
+        llm = get_model()
         
-        contexual_chain = contextual_prompt | chat
+        contexual_chain = contextual_prompt | llm
             
         response = contexual_chain.invoke(
             {
@@ -674,8 +685,8 @@ def add_to_opensearch(docs, key):
 
         print('parent chunk[0]: ', parent_docs[0].page_content)
 
-        if enableContexualRetrieval == 'Enable':
-            parent_docs, contexualized_chunks = get_contexual_docs(docs[-1], parent_docs)
+        if contextual_embedding == 'Enable':
+            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], parent_docs)
             print('parent contextual chunk[0]: ', parent_docs[0].page_content)
 
         if len(parent_docs):
@@ -700,7 +711,7 @@ def add_to_opensearch(docs, key):
                         _doc.metadata["doc_level"] = "child"
                     print('sub_docs[0]: ', sub_docs[0].page_content)
 
-                    if enableContexualRetrieval == 'Enable':
+                    if contextual_embedding == 'Enable':
                         docs = []
                         for doc in sub_docs:
                             docs.append(
@@ -732,9 +743,9 @@ def add_to_opensearch(docs, key):
         print('len(documents): ', len(documents))
 
         if len(documents):
-            if enableContexualRetrieval == 'Enable':                        
+            if contextual_embedding == 'Enable':                        
                 print('chunk[0]: ', documents[0].page_content)             
-                documents, contexualized_chunks = get_contexual_docs(docs[-1], documents)
+                documents, contexualized_chunks = get_contextual_docs(docs[-1], documents)
                 print('contextual chunks[0]: ', contexualized_chunks[0])  
             else:
                 print('documents[0]: ', documents[0])
@@ -1287,7 +1298,7 @@ def get_parameter(model_type):
             "stop_sequences": [HUMAN_PROMPT]            
         }
         
-def summary_of_code(chat, code, mode):
+def summary_of_code(llm, code, mode):
     if mode == 'py': 
         system = (
             "다음의 <article> tag에는 python code가 있습니다. code의 전반적인 목적에 대해 설명하고, 각 함수의 기능과 역할을 자세하게 한국어 500자 이내로 설명하세요."
@@ -1306,7 +1317,7 @@ def summary_of_code(chat, code, mode):
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     print('prompt: ', prompt)
     
-    chain = prompt | chat    
+    chain = prompt | llm    
     try: 
         result = chain.invoke(
             {
@@ -1323,7 +1334,7 @@ def summary_of_code(chat, code, mode):
     
     return summary
 
-def summarize_process_for_relevent_code(conn, chat, code, key, region_name):
+def summarize_process_for_relevent_code(conn, llm, code, key, region_name):
     try: 
         if code.find('\ndef ') != -1:
             start = code.find('\ndef ')
@@ -1349,7 +1360,7 @@ def summarize_process_for_relevent_code(conn, chat, code, key, region_name):
             file_type = key[key.rfind('.')+1:len(key)].lower()
             print('file_type: ', file_type)
                             
-            summary = summary_of_code(chat, code, file_type)
+            summary = summary_of_code(llm, code, file_type)
             print(f"summary ({region_name}, {file_type}): {summary}")
             
             # print('first line summary: ', summary[:len(function_name)])
@@ -1384,12 +1395,12 @@ def summarize_relevant_codes_using_parallel_processing(codes, key):
         parent_conn, child_conn = Pipe()
         parent_connections.append(parent_conn)
             
-        chat = get_chat()
+        llm = get_model()
 
-        LLM_for_chat = get_multimodal_info(model_name)
-        region_name = LLM_for_chat[selected_chat]['bedrock_region']
+        LLM_for_chat = get_model_info(model_name)
+        region_name = LLM_for_chat[selected_model]['bedrock_region']
 
-        process = Process(target=summarize_process_for_relevent_code, args=(child_conn, chat, code, key, region_name))
+        process = Process(target=summarize_process_for_relevent_code, args=(child_conn, llm, code, key, region_name))
         processes.append(process)
         
     for process in processes:
@@ -1406,7 +1417,7 @@ def summarize_relevant_codes_using_parallel_processing(codes, key):
     
     return relevant_codes
 
-def extract_text(chat, img_base64):    
+def extract_text(llm, img_base64):    
     query = "텍스트를 추출해서 markdown 포맷으로 변환하세요. <result> tag를 붙여주세요."
     
     messages = [
@@ -1428,7 +1439,7 @@ def extract_text(chat, img_base64):
     for attempt in range(5):
         print('attempt: ', attempt)
         try: 
-            result = chat.invoke(messages)
+            result = llm.invoke(messages)
             
             extracted_text = result.content
             # print('result of text extraction from an image: ', extracted_text)
@@ -1440,7 +1451,7 @@ def extract_text(chat, img_base64):
     
     return extracted_text
 
-def summary_image(chat, img_base64):  
+def summary_image(llm, img_base64):  
     query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. markdown 포맷으로 답변을 작성합니다."
     
     messages = [
@@ -1462,7 +1473,7 @@ def summary_image(chat, img_base64):
     for attempt in range(5):
         print('attempt: ', attempt)
         try: 
-            result = chat.invoke(messages)
+            result = llm.invoke(messages)
             
             extracted_text = result.content
             # print('summary from an image: ', extracted_text)
@@ -1587,28 +1598,28 @@ def lambda_handler(event, context):
                 print(f"Got object: {s3obj}")
                 size = int(s3obj['ContentLength'])    
 
+                global model_name, multi_region, contextual_embedding
+
                 if 'Metadata' in s3obj:
                     if 'content_type' in s3obj['Metadata']:
                         content_type = s3obj['Metadata']['content_type']
                         print('content_type: ', content_type)
                     if 'contextual_embedding' in s3obj['Metadata']:
                         contextual_embedding = s3obj['Metadata']['contextual_embedding']
-                        print('contextual_embedding: ', contextual_embedding)
-                        global enableContexualRetrieval
-                        enableContexualRetrieval = contextual_embedding
+                        print('contextual_embedding: ', contextual_embedding)                        
                     if 'multi_region' in s3obj['Metadata']:
-                        global multi_region
                         multi_region = s3obj['Metadata']['multi_region']
                         print('multi_region: ', multi_region)
                     if 'model_name' in s3obj['Metadata']:
-                        global model_name
                         model_name = s3obj['Metadata']['model_name']
-                        print('model_name: ', model_name)                    
+                        print('model_name: ', model_name)
+                    else:
+                        model_name = 'default'
 
                         if multi_region == "Disable":
-                            global selected_chat, selected_multimodal, selected_embedding
-                            selected_chat = 0
-                            selected_multimodal = 0
+                            global selected_model, selected_model, selected_embedding
+                            selected_model = 0
+                            selected_model = 0
                             selected_embedding = 0
                 
                 #attributes = ['ETag', 'Checksum', 'ObjectParts', 'StorageClass', 'ObjectSize']
