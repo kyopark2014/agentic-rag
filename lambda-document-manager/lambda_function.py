@@ -1151,7 +1151,11 @@ def load_document(file_type, key):
                             ContentType='image/png',
                             Metadata = {
                                 "ext": 'png',
-                                "page": str(i)
+                                "page": str(i),
+                                "content_type": 'image/png',
+                                "contextual_embedding": contextual_embedding,
+                                "multi_region": multi_region,
+                                "model_name": model_name
                             },
                             Body=pixels
                         )
