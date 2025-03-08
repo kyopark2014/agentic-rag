@@ -692,22 +692,21 @@ def add_to_opensearch(docs, key):
 
         print('splitted_docs[0]: ', splitted_docs[0].page_content)
 
+        parent_docs = []
         if contextual_embedding == 'Enable':
-            contexualized_parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
-            print('parent contextual chunk[0]: ', contexualized_parent_docs[0].page_content)
+            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
+            print('parent contextual chunk[0]: ', parent_docs[0].page_content)    
+        else:
+            parent_docs = splitted_docs  
 
-        if len(contexualized_parent_docs):
-            # print('parent_docs[0]: ', parent_docs[0])
-            # parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
-            # print('parent_doc_ids: ', parent_doc_ids)
-            
-            for i, doc in enumerate(contexualized_parent_docs):
+        if len(parent_docs):
+            for i, doc in enumerate(parent_docs):
                 doc.metadata["doc_level"] = "parent"
                 # print(f"parent_docs[{i}]: {doc}")
-            print('parent_docs[0]: ', contexualized_parent_docs[0].page_content)
+            print('parent_docs[0]: ', parent_docs[0].page_content)
                     
-            try:        
-                parent_doc_ids = vectorstore.add_documents(contexualized_parent_docs, bulk_size = 10000)
+            try:
+                parent_doc_ids = vectorstore.add_documents(parent_docs, bulk_size = 10000)
                 print('parent_doc_ids: ', parent_doc_ids)
                 ids = parent_doc_ids
 
