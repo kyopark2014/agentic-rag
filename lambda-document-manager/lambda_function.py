@@ -296,7 +296,7 @@ def get_model():
 
     print(f'selected_model: {selected_model}, model_name: {model_name}')
 
-    if len(LLM_for_chat) >= selected_model: # exceptional case
+    if selected_model >= len(LLM_for_chat): # exceptional case
         print(f"# of models: {len(LLM_for_chat)}, selected_model: {selected_model}")    
         print('------> selected_model is initiated')
         selected_model = 0
@@ -693,43 +693,44 @@ def add_to_opensearch(docs, key):
         print('splitted_docs[0]: ', splitted_docs[0].page_content)
 
         if contextual_embedding == 'Enable':
-            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
-            print('parent contextual chunk[0]: ', parent_docs[0].page_content)
+            contexualized_parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
+            print('parent contextual chunk[0]: ', contexualized_parent_docs[0].page_content)
 
-        if len(parent_docs):
+        if len(contexualized_parent_docs):
             # print('parent_docs[0]: ', parent_docs[0])
             # parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
             # print('parent_doc_ids: ', parent_doc_ids)
             
-            for i, doc in enumerate(parent_docs):
+            for i, doc in enumerate(contexualized_parent_docs):
                 doc.metadata["doc_level"] = "parent"
                 # print(f"parent_docs[{i}]: {doc}")
                     
             try:        
-                parent_doc_ids = vectorstore.add_documents(parent_docs, bulk_size = 10000)
+                parent_doc_ids = vectorstore.add_documents(contexualized_parent_docs, bulk_size = 10000)
                 print('parent_doc_ids: ', parent_doc_ids)
                 ids = parent_doc_ids
 
-                for i, doc in enumerate(parent_docs):
+                for i, doc in enumerate(splitted_docs):
                     _id = parent_doc_ids[i]
-                    sub_docs = child_splitter.split_documents([doc])
-                    for _doc in sub_docs:
+                    child_docs = child_splitter.split_documents([doc])
+                    for _doc in child_docs:
                         _doc.metadata["parent_doc_id"] = _id
                         _doc.metadata["doc_level"] = "child"
-                    print('sub_docs[0]: ', sub_docs[0].page_content)
 
                     if contextual_embedding == 'Enable':
-                        contexualized_docs = [] # contexualized child doc
-                        for _doc in sub_docs:
-                            contexualized_docs.append(
+                        contexualized_child_docs = [] # contexualized child doc
+                        for _doc in child_docs:
+                            contexualized_child_docs.append(
                                 Document(
                                     page_content=contexualized_chunks[i]+"\n\n"+_doc.page_content,
                                     metadata=_doc.metadata
                                 )
                             )
-                        sub_docs = contexualized_docs
+                        child_docs = contexualized_child_docs
+
+                    print('child_docs[0]: ', child_docs[0].page_content)
                 
-                    child_doc_ids = vectorstore.add_documents(sub_docs, bulk_size = 10000)
+                    child_doc_ids = vectorstore.add_documents(child_docs, bulk_size = 10000)
                     print('child_doc_ids: ', child_doc_ids)
                     print('len(child_doc_ids): ', len(child_doc_ids))
                         
