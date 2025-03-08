@@ -704,6 +704,7 @@ def add_to_opensearch(docs, key):
             for i, doc in enumerate(contexualized_parent_docs):
                 doc.metadata["doc_level"] = "parent"
                 # print(f"parent_docs[{i}]: {doc}")
+            print('parent_docs[0]: ', contexualized_parent_docs[0].page_content)
                     
             try:        
                 parent_doc_ids = vectorstore.add_documents(contexualized_parent_docs, bulk_size = 10000)
