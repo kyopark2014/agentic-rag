@@ -74,7 +74,7 @@ def get_current_time(format: str=f"%Y-%m-%d %H:%M:%S")->str:
 def get_weather_info(city: str) -> str:
     """
     retrieve weather information by city name and then return weather statement.
-    city: the name of city to retrieve
+    city: the English name of city to retrieve
     return: weather statement
     """    
     
