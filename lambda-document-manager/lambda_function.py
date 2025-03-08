@@ -48,11 +48,10 @@ model_name = "default"
 multi_region = 'Disable'
 
 def get_model_info(model):
-    if model != model_name:
-        global selected_model
-        selected_model = 0
+    global model_name, selected_model
 
-        global model_name
+    if model != model_name:
+        selected_model = 0
         model_name = model
 
     nova_pro_models = [   # Nova Pro
