@@ -412,32 +412,43 @@ config = {
 message = app.invoke({"messages": inputs}, config)
 ```
 
-Tool use 패턴의 agent는 정의된 tool 함수의 docstring을 이용해 목적에 맞는 tool을 선택합니다. 아래의 search_by_knowledge_base는 OpenSearch를 데이터 저장소로 사용하는 knowledbe base로 부터 관련된 문서를 얻어오는 tool의 예입니다. "Search technical information by keyword"로 정의하였으므로 질문이 기술적인 내용이라면 search_by_knowledge_base가 호출되게 됩니다.
+Tool use 패턴의 agent는 정의된 tool 함수의 docstring을 이용해 목적에 맞는 tool을 선택합니다. 아래의 search_by_opensearch는 OpenSearch를 데이터 저장소로 사용하여 관련된 문서를 얻어오는 tool의 예입니다. "Search technical information by keyword"로 정의하였으므로 질문이 기술적인 내용이라면 search_by_opensearch가 호출되게 됩니다.
 
 ```python
 @tool    
-def search_by_knowledge_base(keyword: str) -> str:
+def search_by_opensearch(keyword: str) -> str:
     """
     Search technical information by keyword and then return the result as a string.
     keyword: search keyword
     return: the technical information of keyword
     """    
     
-    relevant_docs = []
-    if knowledge_base_id:    
-        retriever = AmazonKnowledgeBasesRetriever(
-            knowledge_base_id=knowledge_base_id, 
-            retrieval_config={"vectorSearchConfiguration": {
-                "numberOfResults": top_k,
-                "overrideSearchType": "HYBRID" 
-            }},
-        )        
-        docs = retriever.invoke(keyword)
+    keyword = keyword.replace('\'','')
+    keyword = keyword.replace('|','')
+    keyword = keyword.replace('\n','')
     
-    relevant_context = ""
-    for i, doc in enumerate(docs):
-        relevant_context += doc.page_content + "\n\n"        
-    return relevant_context    
+    # retrieve
+    relevant_docs = rag.retrieve_documents_from_opensearch(keyword, top_k=2)                            
+
+    # grade  
+    filtered_docs = chat.grade_documents(keyword, relevant_docs)
+
+    global reference_docs
+    if len(filtered_docs):
+        reference_docs += filtered_docs
+        
+    for i, doc in enumerate(filtered_docs):
+        if len(doc.page_content)>=100:
+            text = doc.page_content[:100]
+        else:
+            text = doc.page_content            
+       
+    relevant_context = "" 
+    for doc in filtered_docs:
+        content = doc.page_content        
+        relevant_context = relevant_context + f"{content}\n\n"
+        
+    return relevant_context  
 ```
 
 
