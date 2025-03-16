@@ -420,7 +420,7 @@ print(image_base64)
     try:     
         resp = repl.run(code)
 
-        base64Img = resp.encode('UTF-8')
+        base64Img = resp
         
         if base64Img:
             byteImage = BytesIO(base64.b64decode(base64Img))
