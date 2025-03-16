@@ -368,10 +368,88 @@ def code_interpreter(code):
     logger.info(f"result: {result}")
     return result
 
-python_repl = PythonAstREPLTool()
+repl = PythonAstREPLTool()
+
+@tool
+def repl_coder(code):
+    """
+    Use this to execute python code and do math. 
+    If you want to see the output of a value, you should print it out with `print(...)`. This is visible to the user.
+    code: the Python code was written in English
+    """
+    try:
+        result = repl.run(code)
+    except BaseException as e:
+        return f"Failed to execute. Error: {repr(e)}"
+    
+    if result is None:
+        result = "It didn't return anything."
+
+    return result
+
+@tool
+def repl_drawer(code):
+    """
+    Execute a Python script for draw a graph.
+    Since Python runtime cannot use external APIs, necessary data must be included in the code.
+    The graph should use English exclusively for all textual elements.
+    Do not save pictures locally bacause the runtime does not have filesystem.
+    When a comparison is made, all arrays must be of the same length.
+    code: the Python code was written in English
+    return: the url of graph
+    """ 
+        
+    code = re.sub(r"seaborn", "classic", code)
+    code = re.sub(r"plt.savefig", "#plt.savefig", code)
+    code = re.sub(r"plt.show", "#plt.show", code)
+
+    post = """\n
+import io
+import base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png')
+buffer.seek(0)
+image_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+print(image_base64)
+"""
+    code = code + post    
+    logger.info(f"code: {code}")
+    
+    result = ""
+    try:     
+        resp = repl.run(code)
+
+        base64Img = resp
+        
+        if base64Img:
+            byteImage = BytesIO(base64.b64decode(base64Img))
+
+            image_name = generate_short_uuid()+'.png'
+            url = chat.upload_image_to_s3(byteImage, image_name)
+            logger.info(f"url: {url}")
+
+            file_name = url[url.rfind('/')+1:]
+            logger.info(f"file_name: {file_name}")
+
+            global image_url
+            image_url.append(chat.path+'/'+chat.s3_image_prefix+'/'+parse.quote(file_name))
+            logger.info(f"image_url: {image_url}")
+            result = f"생성된 그래프의 URL: {image_url}"
+
+            # im = Image.open(BytesIO(base64.b64decode(base64Img)))  # for debuuing
+            # im.save(image_name, 'PNG')
+
+    except Exception:
+        result = "그래프 생성에 실패했어요. 다시 시도해주세요."
+        err_msg = traceback.format_exc()
+        logger.info(f"error message: {err_msg}")
+
+    logger.info(f"result: {result}")
+    return result
 
 #tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, code_interpreter]
-tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, python_repl]
+tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, repl_drawer, repl_coder]
 
 def run_agent_executor(query, historyMode, st):
     chatModel = chat.get_chat(chat.reasoning_mode)
