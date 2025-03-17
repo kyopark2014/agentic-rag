@@ -471,8 +471,8 @@ def run_agent_executor(query, historyMode, st):
         logger.info(f"last_message: {last_message}")
         
         if isinstance(last_message, AIMessage) and last_message.tool_calls:
-            logger.info(f"{last_message.content}")
-            st.info(f"{last_message.content}")
+            logger.info(f"last_message: {last_message.content}")
+            st.info(f"last_message: {last_message.content}")
 
             for message in last_message.tool_calls:
                 args = message['args']
