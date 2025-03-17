@@ -1617,7 +1617,8 @@ def get_metadata(info):
         model_name = info["model_name"]
     contexual_text = ""
     if "contextual_text" in info:
-        contexual_text = info["contextual_text"].encode('ascii')
+        contexual_text = info["contextual_text"]
+        contexual_text = contexual_text.decode('utf8').encode('ascii', 'replace')
     
     metadata = {
         "ext": ext,
