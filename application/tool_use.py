@@ -496,7 +496,6 @@ def run_agent_executor(query, historyMode, st):
             return "end"
            
     def call_model(state: State, config):
-        print("###### call_model ######")
         logger.info(f"###### call_model ######")
         logger.info(f"state: {state['messages']}")
                 
