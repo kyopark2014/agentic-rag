@@ -650,7 +650,7 @@ def get_contextual_text(whole_text, splitted_text):
     output = response.content
     contextual_text = output[output.find('<result>')+8:len(output)-9]
         
-    print(f"--> whole_text: {whole_text}")
+    # print(f"--> whole_text: {whole_text}")
     print(f"--> original_chunk: {splitted_text}")
     print(f"--> contexualized_chunk: {contextual_text}")
         
@@ -1179,6 +1179,7 @@ def load_document(file_type, key):
                         (nImages[i]>=1 and (width==0 and height==0)) or \
                         (nImages[i]>=1 and (width>=100 or height>=100)):
 
+                        contexual_text = ""
                         if contextual_embedding == 'Enable':
                             print(f"texts[{i}]: {texts[i]}")
                             if texts[i]:
@@ -1616,7 +1617,7 @@ def get_metadata(info):
         model_name = info["model_name"]
     contexual_text = ""
     if "contextual_text" in info:
-        contexual_text = info["contextual_text"]
+        contexual_text = info["contextual_text"].encode('ascii')
     
     metadata = {
         "ext": ext,
