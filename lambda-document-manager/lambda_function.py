@@ -1203,7 +1203,7 @@ def load_document(file_type, key):
                         fname = 'img_'+key.split('/')[-1].split('.')[0]+f"_{i}"
                         print('fname: ', fname)          
 
-                        encoded_contexual_text = contexual_text.decode('utf8').encode('ascii', 'replace') # s3 meta only allows ASCII format
+                        encoded_contexual_text = contexual_text.encode('ascii', 'replace') # s3 meta only allows ASCII format
                         response = s3_client.put_object(
                             Bucket=s3_bucket,
                             Key=folder+fname+'.png',
