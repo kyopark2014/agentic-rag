@@ -43,6 +43,7 @@ selected_model = 0
 selected_embedding = 0
 maxOutputTokens = 4096
 contextual_embedding = 'Disable'
+ocr = "Disable"
 
 model_name = "default"
 multi_region = 'Disable'
@@ -1132,7 +1133,7 @@ def load_document(file_type, key):
                         print(f"page[{i}] -> (image) width[{j}]: {info['width']}, height[{j}]: {info['height']}")
                         
                     print(f"nImages[{i}]: {nImages[i]}")  # number of XObjects
-                    if nImages[i]>=4 or \
+                    if ocr=="Enable" or nImages[i]>=4 or \
                         (nImages[i]>=1 and (width==0 and height==0)) or \
                         (nImages[i]>=1 and (width>=100 or height>=100)):
                         # save current pdf page to image 
@@ -1610,7 +1611,7 @@ def lambda_handler(event, context):
                 print(f"Got object: {s3obj}")
                 size = int(s3obj['ContentLength'])    
 
-                global model_name, multi_region, contextual_embedding
+                global model_name, multi_region, contextual_embedding, ocr
 
                 if 'Metadata' in s3obj:
                     if 'content_type' in s3obj['Metadata']:
@@ -1622,6 +1623,10 @@ def lambda_handler(event, context):
                     if 'multi_region' in s3obj['Metadata']:
                         multi_region = s3obj['Metadata']['multi_region']
                         print('multi_region: ', multi_region)
+                    if 'ocr' in s3obj['Metadata']:
+                        ocr = s3obj['Metadata']['ocr']
+                        print('ocr: ', ocr)
+                    
                     if 'model_name' in s3obj['Metadata']:
                         model_name = s3obj['Metadata']['model_name']
                         print('model_name: ', model_name)

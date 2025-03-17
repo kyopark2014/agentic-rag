@@ -141,6 +141,7 @@ model_name = "Nova Pro"
 model_type = "nova"
 multi_region = 'Enable'
 contextual_embedding = "Disable"
+ocr_mode = "Disable"
 debug_mode = "Enable"
 
 models = info.get_model_info(model_name)
@@ -148,8 +149,8 @@ number_of_models = len(models)
 selected_chat = 0
 
 reasoning_mode = 'Disable'
-def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode):    
-    global model_name, debug_mode, multi_region, contextual_embedding     
+def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode, ocr):    
+    global model_name, debug_mode, multi_region, contextual_embedding, ocr_mode 
     global selected_chat, selected_embedding, models, number_of_models, reasoning_mode
     
     if model_name != modelName:
@@ -175,6 +176,10 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding
         logger.info(f"contextual_embedding: {contextual_embedding}")
+
+    if ocr_mode != ocr:
+        ocr_mode = ocr
+        logger.info(f"ocr_mode: {ocr_mode}")
 
     reasoning_mode = "Enable" if reasoningMode=="Enable" else "Disable"
     logger.info(f"reasoning_mode: {reasoning_mode}")
@@ -445,7 +450,8 @@ def upload_to_s3(file_bytes, file_name):
             "content_type": content_type,
             "model_name": model_name,
             "contextual_embedding": contextual_embedding,
-            "multi_region": multi_region
+            "ocr": ocr_mode,
+            "multi_region": multi_region            
         }
         
         response = s3_client.put_object(

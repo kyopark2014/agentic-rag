@@ -111,12 +111,17 @@ with st.sidebar:
     contextualEmbedding = 'Enable' if select_contextualEmbedding else 'Disable'
     #print('contextualEmbedding: ', contextualEmbedding)
 
+    # ocr mode
+    select_ocr = st.checkbox('OCR', value=False)
+    ocr = 'Enable' if select_ocr else 'Disable'
+    #print('ocr: ', ocr)
+
     # chart checkbox 
     selected_chart = st.checkbox('Chart', value=False)
     chart = 'Enable' if selected_chart else 'Disable'
     #print('chart: ', chart)
 
-    chat.update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode)
+    chat.update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode, ocr)
     
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")
