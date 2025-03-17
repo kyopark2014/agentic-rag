@@ -239,8 +239,8 @@ print('supportedFormat: ', supportedFormat)
 enableHybridSearch = os.environ.get('enableHybridSearch')
 vectorIndexName = os.environ.get('vectorIndexName')
 
-enableImageExtraction = 'true'
-enablePageImageExraction = 'true'
+enableImageExtraction = 'Enable'
+enablePageImageExraction = 'Enable'
 
 os_client = OpenSearch(
     hosts = [{
@@ -650,6 +650,7 @@ def get_contextual_text(whole_text, splitted_text):
     output = response.content
     contextual_text = output[output.find('<result>')+8:len(output)-9]
         
+    print(f"--> whole_text: {whole_text}")
     print(f"--> original_chunk: {splitted_text}")
     print(f"--> contexualized_chunk: {contextual_text}")
         
@@ -1156,7 +1157,7 @@ def load_document(file_type, key):
                             files.append(table_image)
 
             # extract page images
-            if enablePageImageExraction=='true': 
+            if enablePageImageExraction=='Enable': 
                 for i, page in enumerate(pages):
                     print('page: ', page)
                     
@@ -1181,7 +1182,7 @@ def load_document(file_type, key):
                         if contextual_embedding == 'Enable':
                             print(f"texts[{i}]: {texts[i]}")
                             if texts[i]:
-                                contexual_text = get_contextual_text(whole_text, texts[i])
+                                contexual_text = get_contextual_text(contents, texts[i])
 
                         # save current pdf page to image 
                         pixmap = page.get_pixmap(dpi=200)  # dpi=300
@@ -1222,7 +1223,7 @@ def load_document(file_type, key):
                                     
                 contents = '\n'.join(texts)
                 
-            elif enableImageExtraction == 'true':
+            elif enableImageExtraction == 'Enable':
                 image_files = extract_images_from_pdf(reader, key)
                 for img in image_files:
                     files.append(img)
@@ -1247,7 +1248,7 @@ def load_document(file_type, key):
                 texts.append(text)
             contents = '\n'.join(texts)          
             
-            if enableImageExtraction == 'true':
+            if enableImageExtraction == 'Enable':
                 image_files = extract_images_from_pptx(prs, key)                
                 for img in image_files:
                     files.append(img)
@@ -1271,7 +1272,7 @@ def load_document(file_type, key):
             # print('contents: ', contents)
             
             # Extract images
-            if enableImageExtraction == 'true':
+            if enableImageExtraction == 'Enable':
                 image_files = extract_images_from_docx(doc_contents, key)                
                 for img in image_files:
                     files.append(img)
