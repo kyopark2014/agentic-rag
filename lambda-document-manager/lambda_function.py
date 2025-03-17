@@ -497,7 +497,8 @@ def store_image_for_opensearch(key):
         extracted_text = text[text.find('<result>')+8:len(text)-9] # remove <result> tag
         #print('extracted_text: ', extracted_text)
         
-        summary = summary_image(llm, img_base64)
+        contextual_text = object_meta["contextual_text"]
+        summary = summary_image(llm, img_base64, contextual_text)
         image_summary = summary[summary.find('<result>')+8:len(summary)-9] # remove <result> tag
         #print('image summary: ', image_summary)
         
@@ -507,6 +508,9 @@ def store_image_for_opensearch(key):
             contents = f"[이미지 요약]\n{image_summary}"
         print('image contents: ', contents)
         
+        page = object_meta["page"]
+        print("page: ", page)
+
         docs = []
         if len(contents) > 30:
             docs.append(
@@ -514,7 +518,7 @@ def store_image_for_opensearch(key):
                     page_content=contents,
                     metadata={
                         'name': key,
-                        # 'page':i+1,
+                        'page': page,
                         'url': path+parse.quote(key)
                     }
                 )
@@ -613,6 +617,43 @@ def create_nori_index():
 
 if enableHybridSearch == 'true':
     create_nori_index()
+
+def get_contextual_text(whole_text, splitted_text):
+    contextual_template = (
+        "<document>"
+        "{WHOLE_DOCUMENT}"
+        "</document>"
+        "Here is the chunk we want to situate within the whole document."
+        "<chunk>"
+        "{CHUNK_CONTENT}"
+        "</chunk>"
+        "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk."
+        "Answer only with the succinct context and nothing else."
+        "Put it in <result> tags."
+    )          
+    
+    contextual_prompt = ChatPromptTemplate([
+        ('human', contextual_template)
+    ])
+
+    llm = get_model()
+        
+    contexual_chain = contextual_prompt | llm
+            
+    response = contexual_chain.invoke(
+        {
+            "WHOLE_DOCUMENT": whole_text,
+            "CHUNK_CONTENT": splitted_text
+        }
+    )    
+    # print('--> contexual rext: ', response)
+    output = response.content
+    contextual_text = output[output.find('<result>')+8:len(output)-9]
+        
+    print(f"--> original_chunk: {splitted_text}")
+    print(f"--> contexualized_chunk: {contextual_text}")
+        
+    return contextual_text
 
 def get_contextual_docs(whole_doc, splitted_docs):
     contextual_template = (
@@ -1136,6 +1177,12 @@ def load_document(file_type, key):
                     if ocr=="Enable" or nImages[i]>=4 or \
                         (nImages[i]>=1 and (width==0 and height==0)) or \
                         (nImages[i]>=1 and (width>=100 or height>=100)):
+
+                        if contextual_embedding == 'Enable':
+                            print(f"texts[{i}]: {texts[i]}")
+                            if texts[i]:
+                                contexual_text = get_contextual_text(whole_text, texts[i])
+
                         # save current pdf page to image 
                         pixmap = page.get_pixmap(dpi=200)  # dpi=300
                         #pixels = pixmap.tobytes() # output: jpg
@@ -1164,7 +1211,8 @@ def load_document(file_type, key):
                                 "content_type": 'image/png',
                                 "contextual_embedding": contextual_embedding,
                                 "multi_region": multi_region,
-                                "model_name": model_name
+                                "model_name": model_name,
+                                "contextual_text": contexual_text
                             },
                             Body=pixels
                         )
@@ -1464,8 +1512,12 @@ def extract_text(llm, img_base64):
     
     return extracted_text
 
-def summary_image(llm, img_base64):  
+def summary_image(llm, img_base64, contextual_text):  
     query = "이미지가 의미하는 내용을 풀어서 자세히 알려주세요. markdown 포맷으로 답변을 작성합니다."
+
+    if contextual_text:
+        query += "\n아래 <reference>는 이미지와 관련된 내용입니다. 이미지 분석시 참고하세요. \n<reference>\n"+contextual_text+"\n</reference>"
+        print('image query: ', query)
     
     messages = [
         HumanMessage(
@@ -1540,7 +1592,44 @@ def create_metadata(bucket, key, meta_prefix, s3_prefix, url, category, document
         err_msg = traceback.format_exc()
         print('error message: ', err_msg)        
         raise Exception ("Not able to create meta file")
+
+object_meta = {}
+def get_metadata(info):
+    ext = ""
+    if "ext" in info:
+        ext = info["ext"]
+    page = ""
+    if "page" in info:
+        page = info["page"]    
+    content_type = ""
+    if "content_type" in info:
+        content_type = info["content_type"]
+    contextual_embedding = ""
+    if "contextual_embedding" in info:
+        contextual_embedding = info["contextual_embedding"]    
+    multi_region = ""
+    if "multi_region" in info:
+        multi_region = info["multi_region"]    
+    model_name = ""
+    if "model_name" in info:
+        model_name = info["model_name"]
+    contexual_text = ""
+    if "contextual_text" in info:
+        contexual_text = info["contextual_text"]
     
+    metadata = {
+        "ext": ext,
+        "page": page,
+        "content_type": content_type,
+        "contextual_embedding": contextual_embedding,
+        "multi_region": multi_region,
+        "model_name": model_name,
+        "contextual_text": contexual_text
+    }
+    print('object metadata: ', metadata)
+
+    return metadata
+
 # load csv documents from s3
 def lambda_handler(event, context):
     print('event: ', event)    
@@ -1626,7 +1715,6 @@ def lambda_handler(event, context):
                     if 'ocr' in s3obj['Metadata']:
                         ocr = s3obj['Metadata']['ocr']
                         print('ocr: ', ocr)
-                    
                     if 'model_name' in s3obj['Metadata']:
                         model_name = s3obj['Metadata']['model_name']
                         print('model_name: ', model_name)
@@ -1638,6 +1726,9 @@ def lambda_handler(event, context):
                             selected_model = 0
                             selected_model = 0
                             selected_embedding = 0
+                    
+                    global object_meta
+                    object_meta = get_metadata(s3obj['Metadata'])
                 
                 #attributes = ['ETag', 'Checksum', 'ObjectParts', 'StorageClass', 'ObjectSize']
                 #result = s3_client.get_object_attributes(Bucket=bucket, Key=key, ObjectAttributes=attributes)  
