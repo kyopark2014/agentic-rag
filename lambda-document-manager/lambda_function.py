@@ -1205,7 +1205,8 @@ def load_document(file_type, key):
 
                         encoded_contexual_text = ""  # s3 meta only allows ASCII format
                         if contexual_text:
-                            encoded_contexual_text = contexual_text.encode('ascii') 
+                            # encoded_contexual_text = contexual_text.encode('ascii') 
+                            encoded_contexual_text = contexual_text.encode('utf-8').strip()
                             print('encoded_contexual_text: ', encoded_contexual_text)
 
                         response = s3_client.put_object(
