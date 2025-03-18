@@ -497,8 +497,10 @@ def store_image_for_opensearch(key):
         extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
         #print('extracted_text: ', extracted_text)
         
-        contextual_text = object_meta["contextual_text"]
-        print('contextual_text: ', contextual_text)
+        contextual_text = ""
+        if "contextual_text" in object_meta:
+            contextual_text = object_meta["contextual_text"]
+            print('contextual_text: ', contextual_text)
         summary = summary_image(llm, img_base64, contextual_text)
         image_summary = summary[summary.find('<result>')+8:summary.find('</result>')] # remove <result> tag
         #print('image summary: ', image_summary)
@@ -619,7 +621,7 @@ def create_nori_index():
 if enableHybridSearch == 'true':
     create_nori_index()
 
-def get_contextual_text(whole_text, splitted_text):
+def get_contextual_text(whole_text, splitted_text): # per page
     contextual_template = (
         "<document>"
         "{WHOLE_DOCUMENT}"
@@ -662,7 +664,7 @@ def get_contextual_text(whole_text, splitted_text):
         
     return contextual_text
 
-def get_contextual_docs(whole_doc, splitted_docs):
+def get_contextual_docs(whole_doc, splitted_docs): # per chunk
     contextual_template = (
         "<document>"
         "{WHOLE_DOCUMENT}"
@@ -1227,12 +1229,6 @@ def load_document(file_type, key):
                         (nImages[i]>=1 and (width==0 and height==0)) or \
                         (nImages[i]>=1 and (width>=100 or height>=100)):
 
-                        # contexual_text = ""
-                        # if contextual_embedding == 'Enable':
-                        #     print(f"texts[{i}]: {texts[i]}")
-                        #     if texts[i]:
-                        #         contexual_text = get_contextual_text(contents, texts[i])
-
                         # save current pdf page to image 
                         pixmap = page.get_pixmap(dpi=200)  # dpi=300
                         #pixels = pixmap.tobytes() # output: jpg
@@ -1675,7 +1671,7 @@ def get_metadata(info):
     contexual_text = ""
     if "contextual_text" in info:
         contexual_text = info["contextual_text"]
-    ocr == ""
+    ocr = ""
     if "ocr" in info:
         ocr = info["ocr"]
     
