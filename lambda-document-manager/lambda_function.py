@@ -1094,7 +1094,7 @@ def extract_images_from_docx(doc_contents, key):
     print('extracted_image_files: ', extracted_image_files)    
     return extracted_image_files
 
-def extract_table_image(page, index, table_count, bbox, key):
+def extract_table_image(key, page, index, table_count, bbox):
     pixmap_ori = page.get_pixmap()
     # print(f"width: {pixmap_ori.width}, height: {pixmap_ori.height}")
         
@@ -1141,7 +1141,7 @@ def extract_table_image(page, index, table_count, bbox, key):
 
     return folder+fname+'.png'
 
-def extract_page_images_from_pdf(pages, nImages, contents, texts):
+def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
     files = []
     for i, page in enumerate(pages):
         print('page: ', page)
@@ -1194,10 +1194,10 @@ def extract_page_images_from_pdf(pages, nImages, contents, texts):
                 encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
                 print('encoded_contexual_text: ', encoded_contexual_text)
 
-            key = folder+fname+'.png'
+            image_key = folder+fname+'.png'
             response = s3_client.put_object(
                 Bucket=s3_bucket,
-                Key=key,
+                Key=image_key,
                 ContentType='image/png',
                 Metadata = {     
                     "type": 'image',                           
@@ -1213,11 +1213,11 @@ def extract_page_images_from_pdf(pages, nImages, contents, texts):
             )
             print('response: ', response)
                                             
-            files.append(key)
+            files.append(image_key)
 
     return files
 
-def extract_page_image(page, i, nImages, contents, text, selected_model):
+def extract_page_image(key, page, i, nImages, contents, text, selected_model):
     files = []
     print(f"page[{i}]: {page}")
         
@@ -1269,10 +1269,10 @@ def extract_page_image(page, i, nImages, contents, text, selected_model):
             encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
             print('encoded_contexual_text: ', encoded_contexual_text)
 
-        key = folder+fname+'.png'
+        image_key = folder+fname+'.png'
         response = s3_client.put_object(
             Bucket=s3_bucket,
-            Key=key,
+            Key=image_key,
             ContentType='image/png',
             Metadata = {     
                 "type": 'image',                           
@@ -1288,11 +1288,11 @@ def extract_page_image(page, i, nImages, contents, text, selected_model):
         )
         print('response: ', response)
                                         
-        files.append(key)
+        files.append(image_key)
 
     return files
 
-def extract_page_images_using_parallel_processing(pages, nImages, contents, texts):
+def extract_page_images_using_parallel_processing(key, pages, nImages, contents, texts):
     global selected_model
     
     files = []    
@@ -1307,7 +1307,7 @@ def extract_page_images_using_parallel_processing(pages, nImages, contents, text
         parent_conn, child_conn = Pipe()
         parent_connections.append(parent_conn)
             
-        process = Process(target=extract_page_image, args=(child_conn, pages[i], i, nImages, contents, texts[i], selected_model))
+        process = Process(target=extract_page_image, args=(child_conn, key, pages[i], i, nImages, contents, texts[i], selected_model))
         processes.append(process)
 
         selected_model = selected_model + 1
@@ -1410,7 +1410,7 @@ def load_document(file_type, key):
                             print("\n\n")
                             
                             if tab.row_count>=2:
-                                table_image = extract_table_image(page, i, table_count, tab.bbox, key)
+                                table_image = extract_table_image(key, page, i, table_count, tab.bbox)
                                 table_count += 1
                             
                                 tables.append({
@@ -1422,10 +1422,10 @@ def load_document(file_type, key):
             # extract page images
             if enablePageImageExraction=='Enable': 
                 if multi_region == "Enable":
-                    image_files = extract_page_images_using_parallel_processing(pages, nImages, contents, texts)
+                    image_files = extract_page_images_using_parallel_processing(key, pages, nImages, contents, texts)
                 else:
-                    image_files = extract_page_images_from_pdf(pages, nImages, contents, texts)
-                    
+                    image_files = extract_page_images_from_pdf(key, pages, nImages, contents, texts)
+
                 for img in image_files:
                     files.append(img)
                     print(f"image file: {img}")
