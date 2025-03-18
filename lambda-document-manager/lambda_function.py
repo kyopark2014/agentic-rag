@@ -1223,7 +1223,8 @@ def load_document(file_type, key):
                         (nImages[i]>=1 and (width>=100 or height>=100)):
 
                         contexual_text = ""
-                        # if contextual_embedding == 'Enable':
+                        # To-do: speed up is required
+                        # if contextual_embedding == 'Enable':   
                         #     print('start contextual embedding for image.')
                         #     contexual_text = get_contextual_text(contents, texts[i])
 
