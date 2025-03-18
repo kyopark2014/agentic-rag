@@ -628,7 +628,7 @@ def get_contextual_text(whole_text, splitted_text):
         "{CHUNK_CONTENT}"
         "</chunk>"
         "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk."
-        "Answer only with the succinct context and nothing else."
+        "Answer only with the succinct context and nothing else in English."
         "Put it in <result> tags."
     )          
     
@@ -652,7 +652,7 @@ def get_contextual_text(whole_text, splitted_text):
         
     # print(f"--> whole_text: {whole_text}")
     print(f"--> original_chunk: {splitted_text}")
-    print(f"--> contexualized_chunk: {contextual_text}")
+    print(f"--> contextual_text: {contextual_text}")
         
     return contextual_text
 
