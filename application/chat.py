@@ -423,7 +423,7 @@ def traslation(chat, text, input_language, output_language):
 
         raise Exception ("Not able to request to LLM")
 
-    return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
+    return msg[msg.find('<result>')+8:msg.find('</result>')] # remove <result> tag
 
 def upload_to_s3(file_bytes, file_name):
     """
@@ -1127,7 +1127,7 @@ def revise_question(query, st):
         )
         generated_question = result.content
         
-        revised_question = generated_question[generated_question.find('<result>')+8:len(generated_question)-9] # remove <result> tag                   
+        revised_question = generated_question[generated_question.find('<result>')+8:generated_question.find('</result>')] # remove <result> tag                   
         # print('revised_question: ', revised_question)
 
         st.info(f"수정된 질문: {revised_question}")

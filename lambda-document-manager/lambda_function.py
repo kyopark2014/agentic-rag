@@ -494,13 +494,13 @@ def store_image_for_opensearch(key):
         # extract text from the image
         llm = get_model()
         text = extract_text(llm, img_base64)
-        extracted_text = text[text.find('<result>')+8:len(text)-9] # remove <result> tag
+        extracted_text = text[text.find('<result>')+8:text.find('</result>')] # remove <result> tag
         #print('extracted_text: ', extracted_text)
         
         contextual_text = object_meta["contextual_text"]
         print('contextual_text: ', contextual_text)
         summary = summary_image(llm, img_base64, contextual_text)
-        image_summary = summary[summary.find('<result>')+8:len(summary)-9] # remove <result> tag
+        image_summary = summary[summary.find('<result>')+8:summary.find('</result>')] # remove <result> tag
         #print('image summary: ', image_summary)
         
         if len(extracted_text) > 30:
@@ -649,7 +649,7 @@ def get_contextual_text(whole_text, splitted_text):
     )    
     # print('--> contexual rext: ', response)
     output = response.content
-    contextual_text = output[output.find('<result>')+8:len(output)-9]
+    contextual_text = output[output.find('<result>')+8:output.find('</result>')]
         
     # print(f"--> whole_text: {whole_text}")
     print(f"--> original_chunk: {splitted_text}")
@@ -691,7 +691,7 @@ def get_contextual_docs(whole_doc, splitted_docs):
         )
         # print('--> contexual chunk: ', response)
         output = response.content
-        contextualized_chunk = output[output.find('<result>')+8:len(output)-9]
+        contextualized_chunk = output[output.find('<result>')+8:output.find('</result>')]
         contexualized_chunks.append(contextualized_chunk)
         
         print(f"--> {i}: original_chunk: {doc.page_content}")
@@ -875,6 +875,16 @@ def extract_images_from_pdf(reader, key):
                     Bucket=s3_bucket,
                     Key=img_key,
                     ContentType=contentType,
+                    Metadata = {
+                        "type": 'image',
+                        "ext": 'png',
+                        "page": i+1,
+                        "contextual_embedding": contextual_embedding,
+                        "multi_region": multi_region,
+                        "model_name": model_name,
+                        "contextual_text": "",
+                        "ocr": ocr
+                    },
                     Body=pixels
                 )
                 print('response: ', response)
@@ -926,6 +936,16 @@ def extract_images_from_pptx(prs, key):
                     Bucket=s3_bucket,
                     Key=img_key,
                     ContentType='image/png',
+                    Metadata = {
+                        "type": 'image',
+                        "ext": 'png',
+                        "page": i+1,
+                        "contextual_embedding": contextual_embedding,
+                        "multi_region": multi_region,
+                        "model_name": model_name,
+                        "contextual_text": "",
+                        "ocr": ocr
+                    },
                     Body=pixels
                 )
                 print('response: ', response)
@@ -1004,6 +1024,16 @@ def extract_images_from_docx(doc_contents, key):
                 Bucket=s3_bucket,
                 Key=img_key,
                 ContentType=contentType,
+                Metadata = {
+                    "type": 'image',
+                    "ext": 'png',
+                    # "page": str(index),
+                    "contextual_embedding": contextual_embedding,
+                    "multi_region": multi_region,
+                    "model_name": model_name,
+                    "contextual_text": "",
+                    "ocr": ocr
+                },
                 Body=pixels
             )
             print('response: ', response)
@@ -1057,13 +1087,19 @@ def extract_table_image(page, index, table_count, bbox, key):
         Key=folder+fname+'.png',
         ContentType='image/png',
         Metadata = {
+            "type": 'table',
             "ext": 'png',
-            "page": str(index)
+            "page": str(index),
+            "contextual_embedding": contextual_embedding,
+            "multi_region": multi_region,
+            "model_name": model_name,
+            "contextual_text": "",
+            "ocr": ocr
         },
         Body=pixels
     )
     # print('response: ', response)
-    
+
     return folder+fname+'.png'
                  
 # load documents from s3 for pdf and txt
@@ -1213,14 +1249,15 @@ def load_document(file_type, key):
                             Bucket=s3_bucket,
                             Key=folder+fname+'.png',
                             ContentType='image/png',
-                            Metadata = {
+                            Metadata = {     
+                                "type": 'image',                           
                                 "ext": 'png',
                                 "page": str(i),
-                                "content_type": 'image/png',
                                 "contextual_embedding": contextual_embedding,
                                 "multi_region": multi_region,
                                 "model_name": model_name,
-                                "contextual_text": encoded_contexual_text
+                                "contextual_text": encoded_contexual_text,
+                                "ocr": ocr
                             },
                             Body=pixels
                         )
@@ -1230,7 +1267,7 @@ def load_document(file_type, key):
                                     
                 contents = '\n'.join(texts)
                 
-            elif enableImageExtraction == 'Enable':
+            elif enableImageExtraction=='Enable' and ocr=='Disable':
                 image_files = extract_images_from_pdf(reader, key)
                 for img in image_files:
                     files.append(img)
@@ -1603,6 +1640,9 @@ def create_metadata(bucket, key, meta_prefix, s3_prefix, url, category, document
 
 object_meta = {}
 def get_metadata(info):
+    type = ""
+    if "type" in info:
+        type = info["type"]
     ext = ""
     if "ext" in info:
         ext = info["ext"]
@@ -1623,16 +1663,21 @@ def get_metadata(info):
         model_name = info["model_name"]
     contexual_text = ""
     if "contextual_text" in info:
-        contexual_text = info["contextual_text"]        
+        contexual_text = info["contextual_text"]
+    ocr == ""
+    if "ocr" in info:
+        ocr = info["ocr"]
     
     metadata = {
+        "type": type,
         "ext": ext,
         "page": page,
         "content_type": content_type,
         "contextual_embedding": contextual_embedding,
         "multi_region": multi_region,
         "model_name": model_name,
-        "contextual_text": contexual_text
+        "contextual_text": contexual_text,
+        "ocr": ocr
     }
     print('object metadata: ', metadata)
 
