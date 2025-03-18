@@ -239,6 +239,7 @@ print('supportedFormat: ', supportedFormat)
 enableHybridSearch = os.environ.get('enableHybridSearch')
 vectorIndexName = os.environ.get('vectorIndexName')
 
+enableTableExtraction = 'Enable'
 enableImageExtraction = 'Enable'
 enablePageImageExraction = 'Enable'
 
@@ -1172,33 +1173,34 @@ def load_document(file_type, key):
             contents = '\n'.join(texts)
             
             pages = fitz.open(stream=Byte_contents, filetype='pdf')     
-
+            
             # extract table data
-            table_count = 0
-            for i, page in enumerate(pages):
-                page_tables = page.find_tables()
-                
-                if page_tables.tables:
-                    print('page_tables.tables: ', len(page_tables.tables))
+            if enableTableExtraction=="Enable" and ocr=="Disable":
+                table_count = 0
+                for i, page in enumerate(pages):
+                    page_tables = page.find_tables()
+                    
+                    if page_tables.tables:
+                        print('page_tables.tables: ', len(page_tables.tables))
 
-                    for tab in page_tables.tables:    
-                        print(tab.to_markdown())    
-                        print(f"index: {i}")
-                        print(f"bounding box: {tab.bbox}")  # bounding box of the full table
-                        #print(f"top-left cell: {tab.cells[0]}")  # top-left cell
-                        #print(f"bottom-right cell: {tab.cells[-1]}")  # bottom-right cell
-                        print(f"row count: {tab.row_count}, column count: {tab.col_count}") # row and column counts
-                        print("\n\n")
-                        
-                        if tab.row_count>=2:
-                            table_image = extract_table_image(page, i, table_count, tab.bbox, key)
-                            table_count += 1
-                        
-                            tables.append({
-                                "body": tab.to_markdown(),
-                                "name": table_image
-                            })                    
-                            files.append(table_image)
+                        for tab in page_tables.tables:    
+                            print(tab.to_markdown())    
+                            print(f"index: {i}")
+                            print(f"bounding box: {tab.bbox}")  # bounding box of the full table
+                            #print(f"top-left cell: {tab.cells[0]}")  # top-left cell
+                            #print(f"bottom-right cell: {tab.cells[-1]}")  # bottom-right cell
+                            print(f"row count: {tab.row_count}, column count: {tab.col_count}") # row and column counts
+                            print("\n\n")
+                            
+                            if tab.row_count>=2:
+                                table_image = extract_table_image(page, i, table_count, tab.bbox, key)
+                                table_count += 1
+                            
+                                tables.append({
+                                    "body": tab.to_markdown(),
+                                    "name": table_image
+                                })                    
+                                files.append(table_image)
 
             # extract page images
             if enablePageImageExraction=='Enable': 
