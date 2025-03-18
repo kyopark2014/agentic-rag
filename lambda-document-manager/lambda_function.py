@@ -342,6 +342,43 @@ def get_model():
         
     return llm
 
+def get_selected_model(selected_model):
+    LLM_for_chat = get_model_info(model_name)
+
+    print(f'selected_model: {selected_model}, model_name: {model_name}')
+
+    profile = LLM_for_chat[selected_model]
+    bedrock_region =  profile['bedrock_region']
+    modelId = profile['model_id']
+    print(f'selected_model: {selected_model}, bedrock_region: {bedrock_region}, modelId: {modelId}')
+                              
+    # bedrock   
+    boto3_bedrock = boto3.client(
+        service_name='bedrock-runtime',
+        region_name=bedrock_region,
+        config=Config(
+            retries = {
+                'max_attempts': 30
+            }
+        )
+    )
+    parameters = {
+        "max_tokens":maxOutputTokens,     
+        "temperature":0.1,
+        "top_k":250,
+        "top_p":0.9,
+        "stop_sequences": [HUMAN_PROMPT]
+    }
+    # print('parameters: ', parameters)
+
+    llm = ChatBedrock(   # new chat model
+        model_id=modelId,
+        client=boto3_bedrock, 
+        model_kwargs=parameters,
+    )    
+            
+    return llm
+
 def get_embedding():
     global selected_embedding
     profile = LLM_embedding[selected_embedding]
@@ -622,7 +659,7 @@ def create_nori_index():
 if enableHybridSearch == 'true':
     create_nori_index()
 
-def get_contextual_text(whole_text, splitted_text): # per page
+def get_contextual_text(whole_text, splitted_text, llm): # per page
     contextual_template = (
         "<document>"
         "{WHOLE_DOCUMENT}"
@@ -642,8 +679,6 @@ def get_contextual_text(whole_text, splitted_text): # per page
 
     contextual_text = ""    
     
-    llm = get_model()
-        
     contexual_chain = contextual_prompt | llm            
     response = contexual_chain.invoke(
         {
@@ -1105,7 +1140,193 @@ def extract_table_image(page, index, table_count, bbox, key):
     # print('response: ', response)
 
     return folder+fname+'.png'
-                 
+
+def extract_page_images_from_pdf(pages, nImages, contents, texts):
+    files = []
+    for i, page in enumerate(pages):
+        print('page: ', page)
+        
+        imgInfo = page.get_image_info()
+        print(f"imgInfo[{i}]: {imgInfo}")         
+        
+        width = height = 0
+        for j, info in enumerate(imgInfo):
+            bbox = info['bbox']
+            print(f"page[{i}] -> bbox[{j}]: {bbox}")
+            if (bbox[2]-bbox[0]>width or bbox[3]-bbox[1]>height) and (bbox[2]-bbox[0]<940 and bbox[3]-bbox[1]<520):
+                width = bbox[2]-bbox[0]
+                height = bbox[3]-bbox[1]
+                print(f"page[{i}] -> (used) width[{j}]: {bbox[2]-bbox[0]}, height[{j}]: {bbox[3]-bbox[1]}")                    
+            print(f"page[{i}] -> (image) width[{j}]: {info['width']}, height[{j}]: {info['height']}")
+            
+        print(f"nImages[{i}]: {nImages[i]}")  # number of XObjects                    
+
+        if ocr=="Enable" or nImages[i]>=4 or \
+            (nImages[i]>=1 and (width==0 and height==0)) or \
+            (nImages[i]>=1 and (width>=100 or height>=100)):
+
+            contexual_text = ""
+            if contextual_embedding == 'Enable':   
+                print('start contextual embedding for image.')
+                llm = get_model()
+                contexual_text = get_contextual_text(contents, texts[i], llm)
+
+            # save current pdf page to image 
+            pixmap = page.get_pixmap(dpi=200)  # dpi=300
+            #pixels = pixmap.tobytes() # output: jpg
+            
+            # convert to png
+            img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+            pixels = BytesIO()
+            img.save(pixels, format='PNG')
+            pixels.seek(0, 0)
+                            
+            # get path from key
+            objectName = (key[key.find(s3_prefix)+len(s3_prefix)+1:len(key)])
+            folder = s3_prefix+'/captures/'+objectName+'/'
+            print('folder: ', folder)
+                    
+            fname = 'img_'+key.split('/')[-1].split('.')[0]+f"_{i}"
+            print('fname: ', fname)          
+
+            encoded_contexual_text = ""  # s3 meta only allows ASCII format
+            if contextual_embedding=='Enable' and contexual_text:
+                encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
+                print('encoded_contexual_text: ', encoded_contexual_text)
+
+            key = folder+fname+'.png'
+            response = s3_client.put_object(
+                Bucket=s3_bucket,
+                Key=key,
+                ContentType='image/png',
+                Metadata = {     
+                    "type": 'image',                           
+                    "ext": 'png',
+                    "page": str(i),
+                    "contextual_embedding": contextual_embedding,
+                    "multi_region": multi_region,
+                    "model_name": model_name,
+                    "contextual_text": encoded_contexual_text,
+                    "ocr": ocr
+                },
+                Body=pixels
+            )
+            print('response: ', response)
+                                            
+            files.append(key)
+
+    return files
+
+def extract_page_image(page, i, nImages, contents, text, selected_model):
+    files = []
+    print(f"page[{i}]: {page}")
+        
+    imgInfo = page.get_image_info()
+    print(f"imgInfo[{i}]: {imgInfo}")
+    
+    width = height = 0
+    for j, info in enumerate(imgInfo):
+        bbox = info['bbox']
+        print(f"page[{i}] -> bbox[{j}]: {bbox}")
+        if (bbox[2]-bbox[0]>width or bbox[3]-bbox[1]>height) and (bbox[2]-bbox[0]<940 and bbox[3]-bbox[1]<520):
+            width = bbox[2]-bbox[0]
+            height = bbox[3]-bbox[1]
+            print(f"page[{i}] -> (used) width[{j}]: {bbox[2]-bbox[0]}, height[{j}]: {bbox[3]-bbox[1]}")                    
+        print(f"page[{i}] -> (image) width[{j}]: {info['width']}, height[{j}]: {info['height']}")
+        
+    print(f"nImages[{i}]: {nImages[i]}")  # number of XObjects                    
+
+    if ocr=="Enable" or nImages[i]>=4 or \
+        (nImages[i]>=1 and (width==0 and height==0)) or \
+        (nImages[i]>=1 and (width>=100 or height>=100)):
+
+        contexual_text = ""
+        if contextual_embedding == 'Enable':   
+            print('start contextual embedding for image.')
+            llm = get_selected_model(selected_model)
+            contexual_text = get_contextual_text(contents, text, llm)
+
+        # save current pdf page to image 
+        pixmap = page.get_pixmap(dpi=200)  # dpi=300
+        #pixels = pixmap.tobytes() # output: jpg
+        
+        # convert to png
+        img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+        pixels = BytesIO()
+        img.save(pixels, format='PNG')
+        pixels.seek(0, 0)
+                        
+        # get path from key
+        objectName = (key[key.find(s3_prefix)+len(s3_prefix)+1:len(key)])
+        folder = s3_prefix+'/captures/'+objectName+'/'
+        print('folder: ', folder)
+                
+        fname = 'img_'+key.split('/')[-1].split('.')[0]+f"_{i}"
+        print('fname: ', fname)          
+
+        encoded_contexual_text = ""  # s3 meta only allows ASCII format
+        if contextual_embedding=='Enable' and contexual_text:
+            encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
+            print('encoded_contexual_text: ', encoded_contexual_text)
+
+        key = folder+fname+'.png'
+        response = s3_client.put_object(
+            Bucket=s3_bucket,
+            Key=key,
+            ContentType='image/png',
+            Metadata = {     
+                "type": 'image',                           
+                "ext": 'png',
+                "page": str(i),
+                "contextual_embedding": contextual_embedding,
+                "multi_region": multi_region,
+                "model_name": model_name,
+                "contextual_text": encoded_contexual_text,
+                "ocr": ocr
+            },
+            Body=pixels
+        )
+        print('response: ', response)
+                                        
+        files.append(key)
+
+    return files
+
+def extract_page_images_using_parallel_processing(pages, nImages, contents, texts):
+    global selected_model
+    
+    files = []    
+
+    processes = []
+    parent_connections = []
+
+    LLM_for_chat = get_model_info(model_name)
+
+    for i in range(len(pages)):
+        print(f"extract page image[{i}]: {texts[i]}")        
+        parent_conn, child_conn = Pipe()
+        parent_connections.append(parent_conn)
+            
+        process = Process(target=extract_page_image, args=(child_conn, pages[i], i, nImages, contents, texts[i], selected_model))
+        processes.append(process)
+
+        selected_model = selected_model + 1
+        if selected_model >= len(LLM_for_chat):
+            selected_model = 0
+    for process in processes:
+        process.start()
+            
+    for parent_conn in parent_connections:
+        file = parent_conn.recv()
+
+        if file is not None:
+            files.append(file)
+
+    for process in processes:
+        process.join()
+    
+    return files
+
 # load documents from s3 for pdf and txt
 def load_document(file_type, key):
     s3r = boto3.resource("s3")
@@ -1200,83 +1421,20 @@ def load_document(file_type, key):
 
             # extract page images
             if enablePageImageExraction=='Enable': 
-                for i, page in enumerate(pages):
-                    print('page: ', page)
+                if multi_region == "Enable":
+                    image_files = extract_page_images_using_parallel_processing(pages, nImages, contents, texts)
+                else:
+                    image_files = extract_page_images_from_pdf(pages, nImages, contents, texts)
                     
-                    imgInfo = page.get_image_info()
-                    print(f"imgInfo[{i}]: {imgInfo}")         
-                    
-                    width = height = 0
-                    for j, info in enumerate(imgInfo):
-                        bbox = info['bbox']
-                        print(f"page[{i}] -> bbox[{j}]: {bbox}")
-                        if (bbox[2]-bbox[0]>width or bbox[3]-bbox[1]>height) and (bbox[2]-bbox[0]<940 and bbox[3]-bbox[1]<520):
-                            width = bbox[2]-bbox[0]
-                            height = bbox[3]-bbox[1]
-                            print(f"page[{i}] -> (used) width[{j}]: {bbox[2]-bbox[0]}, height[{j}]: {bbox[3]-bbox[1]}")                    
-                        print(f"page[{i}] -> (image) width[{j}]: {info['width']}, height[{j}]: {info['height']}")
-                        
-                    print(f"nImages[{i}]: {nImages[i]}")  # number of XObjects                    
-
-                    if ocr=="Enable" or nImages[i]>=4 or \
-                        (nImages[i]>=1 and (width==0 and height==0)) or \
-                        (nImages[i]>=1 and (width>=100 or height>=100)):
-
-                        contexual_text = ""
-                        # To-do: speed up is required
-                        # if contextual_embedding == 'Enable':   
-                        #     print('start contextual embedding for image.')
-                        #     contexual_text = get_contextual_text(contents, texts[i])
-
-                        # save current pdf page to image 
-                        pixmap = page.get_pixmap(dpi=200)  # dpi=300
-                        #pixels = pixmap.tobytes() # output: jpg
-                        
-                        # convert to png
-                        img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-                        pixels = BytesIO()
-                        img.save(pixels, format='PNG')
-                        pixels.seek(0, 0)
-                                        
-                        # get path from key
-                        objectName = (key[key.find(s3_prefix)+len(s3_prefix)+1:len(key)])
-                        folder = s3_prefix+'/captures/'+objectName+'/'
-                        print('folder: ', folder)
-                                
-                        fname = 'img_'+key.split('/')[-1].split('.')[0]+f"_{i}"
-                        print('fname: ', fname)          
-
-                        encoded_contexual_text = ""  # s3 meta only allows ASCII format
-                        if contextual_embedding=='Enable' and contexual_text:
-                            encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
-                            print('encoded_contexual_text: ', encoded_contexual_text)
-
-                        response = s3_client.put_object(
-                            Bucket=s3_bucket,
-                            Key=folder+fname+'.png',
-                            ContentType='image/png',
-                            Metadata = {     
-                                "type": 'image',                           
-                                "ext": 'png',
-                                "page": str(i),
-                                "contextual_embedding": contextual_embedding,
-                                "multi_region": multi_region,
-                                "model_name": model_name,
-                                "contextual_text": encoded_contexual_text,
-                                "ocr": ocr
-                            },
-                            Body=pixels
-                        )
-                        print('response: ', response)
-                                                        
-                        files.append(folder+fname+'.png')
-                                    
-                contents = '\n'.join(texts)
-                
+                for img in image_files:
+                    files.append(img)
+                    print(f"image file: {img}")
+                                                    
             elif enableImageExtraction=='Enable' and ocr=='Disable':
                 image_files = extract_images_from_pdf(reader, key)
                 for img in image_files:
                     files.append(img)
+                    print(f"image file: {img}")
         
         except Exception:
                 err_msg = traceback.format_exc()
