@@ -498,6 +498,7 @@ def store_image_for_opensearch(key):
         #print('extracted_text: ', extracted_text)
         
         contextual_text = object_meta["contextual_text"]
+        print('contextual_text: ', contextual_text)
         summary = summary_image(llm, img_base64, contextual_text)
         image_summary = summary[summary.find('<result>')+8:len(summary)-9] # remove <result> tag
         #print('image summary: ', image_summary)
