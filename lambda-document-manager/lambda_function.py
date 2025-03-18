@@ -657,7 +657,7 @@ def get_contextual_text(whole_text, splitted_text): # per page
         result = output[output.find('<result>')+8:output.find('</result>')]
         
         # print(f"--> whole_text: {whole_text}")
-        print(f"--> {i}, original_chunk: {splitted_text}")
+        print(f"--> {i}, original_chunk: {text}")
         print(f"--> {i}, contextual_text: {result}")
 
         contextual_text.append(result)
