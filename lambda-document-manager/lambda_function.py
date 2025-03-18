@@ -641,7 +641,7 @@ def get_contextual_text(whole_text, splitted_text): # per page
 
     contextual_text = []
     for i, text in enumerate(splitted_text):
-        print(f"--> {i}: {text}")
+        # print(f"--> {i}: {text}")
         llm = get_model()
             
         contexual_chain = contextual_prompt | llm
