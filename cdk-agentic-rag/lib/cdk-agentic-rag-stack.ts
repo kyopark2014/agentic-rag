@@ -271,7 +271,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
         functionName: `lambda-document-manager-for-${projectName}-${i}`,
         role: roleLambdaDocument,
         code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, '../../lambda-document-manager')),
-        timeout: cdk.Duration.seconds(600),
+        timeout: cdk.Duration.seconds(900),
         memorySize: 8192,
         environment: {
           s3_bucket: s3Bucket.bucketName,

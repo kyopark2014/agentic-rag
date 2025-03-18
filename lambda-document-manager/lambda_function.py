@@ -640,29 +640,25 @@ def get_contextual_text(whole_text, splitted_text): # per page
         ('human', contextual_template)
     ])
 
-    contextual_text = []
-    for i, text in enumerate(splitted_text):
-        # print(f"--> {i}: {text}")
-        llm = get_model()
-            
-        contexual_chain = contextual_prompt | llm
-                
-        response = contexual_chain.invoke(
-            {
-                "WHOLE_DOCUMENT": whole_text,
-                "CHUNK_CONTENT": text
-            }
-        )    
-        # print('--> contexual rext: ', response)
-        output = response.content
-        result = output[output.find('<result>')+8:output.find('</result>')]
+    contextual_text = ""    
+    
+    llm = get_model()
         
-        # print(f"--> whole_text: {whole_text}")
-        print(f"--> {i}, original_chunk: {text}")
-        print(f"--> {i}, contextual_text: {result}")
+    contexual_chain = contextual_prompt | llm            
+    response = contexual_chain.invoke(
+        {
+            "WHOLE_DOCUMENT": whole_text,
+            "CHUNK_CONTENT": splitted_text
+        }
+    )    
+    # print('--> contexual rext: ', response)
+    output = response.content
+    contextual_text = output[output.find('<result>')+8:output.find('</result>')]
+    
+    # print(f"--> whole_text: {whole_text}")
+    print(f"--> original_chunk: {splitted_text}")
+    print(f"--> contextual_text: {contextual_text}")
 
-        contextual_text.append(result)
-        
     return contextual_text
 
 def get_contextual_docs(whole_doc, splitted_docs): # per chunk
@@ -1204,11 +1200,6 @@ def load_document(file_type, key):
 
             # extract page images
             if enablePageImageExraction=='Enable': 
-                contexual_text = []
-                if contextual_embedding == 'Enable':
-                    print('start contextual embedding for images.')
-                    contexual_text = get_contextual_text(contents, texts)
-
                 for i, page in enumerate(pages):
                     print('page: ', page)
                     
@@ -1231,6 +1222,11 @@ def load_document(file_type, key):
                         (nImages[i]>=1 and (width==0 and height==0)) or \
                         (nImages[i]>=1 and (width>=100 or height>=100)):
 
+                        contexual_text = ""
+                        if contextual_embedding == 'Enable':
+                            print('start contextual embedding for image.')
+                            contexual_text = get_contextual_text(contents, texts[i])
+
                         # save current pdf page to image 
                         pixmap = page.get_pixmap(dpi=200)  # dpi=300
                         #pixels = pixmap.tobytes() # output: jpg
@@ -1250,8 +1246,8 @@ def load_document(file_type, key):
                         print('fname: ', fname)          
 
                         encoded_contexual_text = ""  # s3 meta only allows ASCII format
-                        if contextual_embedding=='Enable' and contexual_text[i]:
-                            encoded_contexual_text = contexual_text[i].encode('ascii', 'ignore').decode('ascii')
+                        if contextual_embedding=='Enable' and contexual_text:
+                            encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
                             print('encoded_contexual_text: ', encoded_contexual_text)
 
                         response = s3_client.put_object(
