@@ -810,7 +810,7 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
         parent_connections = []
     
         for i in range(len(LLM_for_chat)):
-            print(f"extract contextual doc[{index}]")        
+            print(f"{i}: extract contextual doc[{index}]")        
             parent_conn, child_conn = Pipe()
             parent_connections.append(parent_conn)
                 
@@ -1407,7 +1407,7 @@ def extract_page_images_using_parallel_processing(key, pages, nImages, contents,
         processes = []
         parent_connections = []
         for i in range(len(LLM_for_chat)):
-            print(f"extract page image[{index}]")        
+            print(f"{i}: extract page image[{index}]")
             parent_conn, child_conn = Pipe()
             parent_connections.append(parent_conn)
                 
