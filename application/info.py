@@ -61,7 +61,12 @@ claude_3_7_sonnet_models = [   # Sonnet 3.7
     {
         "bedrock_region": "us-east-1", # N.Virginia
         "model_type": "claude",
-        "model_id": "us.anthropic.claude-3-5-sonnet-20240620-v1:0"
+        "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    },
+    {
+        "bedrock_region": "us-east-2", # Ohio
+        "model_type": "claude",
+        "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
     }
 ]
 
