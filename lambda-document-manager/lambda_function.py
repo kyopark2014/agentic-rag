@@ -798,25 +798,30 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
     
     contexualized_docs = []
     contexualized_chunks = []  
+    child_connnections = []
+    parent_connections = []
 
     LLM_for_chat = get_model_info(model_name)
 
     # for i in range(len(splitted_docs)):
     index = 0
-    parent_connections = []
     while index < len(splitted_docs):
         print(f"index: {index}")
+
         processes = []
+        parent_connections = []
+    
         for i in range(len(LLM_for_chat)):
             print(f"{i}: extract contextual doc[{index}]")        
-            parent_conn, child_conn = Pipe()            
+            parent_conn, child_conn = Pipe()
+            parent_connections.append(parent_conn)
 
             if index < len(LLM_for_chat):
+                parent_conn, child_conn = Pipe()                
                 parent_connections.append(parent_conn)
-            else:
-                parent_connections[i] = parent_conn
+                child_connnections.append(child_conn)
                 
-            process = Process(target=get_contextual_doc, args=(child_conn, whole_doc, splitted_docs[index], selected_model))
+            process = Process(target=get_contextual_doc, args=(child_connnections[i], whole_doc, splitted_docs[index], selected_model))
             processes.append(process)
 
             selected_model = selected_model + 1
@@ -838,7 +843,7 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
 
         for process in processes:
             process.join()
-            
+    
     return contexualized_docs, contexualized_chunks
 
 def add_to_opensearch(docs, key):    
@@ -1401,23 +1406,23 @@ def extract_page_images_using_parallel_processing(key, pages, nImages, contents,
     global selected_model
     
     files = []    
+
     LLM_for_chat = get_model_info(model_name)
 
     index = 0
-    
     parent_connections = []
+    child_connnections = []        
     while index < len(pages):
         processes = []
         for i in range(len(LLM_for_chat)):
-            print(f"{i}: extract page image[{index}]")
-            parent_conn, child_conn = Pipe()
+            print(f"{i}: extract page image[{index}]")        
 
             if index < len(LLM_for_chat):
+                parent_conn, child_conn = Pipe()                
                 parent_connections.append(parent_conn)
-            else:
-                parent_connections[i] = parent_conn
+                child_connnections.append(child_conn)
                 
-            process = Process(target=extract_page_image, args=(child_conn, key, pages[index], index, nImages, contents, texts[index], selected_model))
+            process = Process(target=extract_page_image, args=(child_connnections[i], key, pages[index], index, nImages, contents, texts[index], selected_model))
             processes.append(process)
 
             selected_model = selected_model + 1
