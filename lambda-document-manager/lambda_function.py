@@ -925,8 +925,11 @@ def add_to_opensearch(docs, key):
 
         if len(splitted_docs):
             if contextual_embedding == 'Enable':
-                print('chunk[0]: ', splitted_docs[0].page_content)
-                documents, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
+                if multi_region=="Enable":
+                    documents, contexualized_chunks = get_contextual_docs_using_parallel_processing(docs[-1], splitted_docs)
+                else:
+                    documents, contexualized_chunks = get_contextual_docs_from_chunks(docs[-1], splitted_docs)
+
                 print('contextual chunks[0]: ', contexualized_chunks[0])  
             else:
                 print('documents[0]: ', documents[0])
