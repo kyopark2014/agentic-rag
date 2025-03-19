@@ -169,6 +169,11 @@ def get_model_info(model):
             "bedrock_region": "us-east-1", # N.Virginia
             "model_type": "claude",
             "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+            "bedrock_region": "us-east-2", # N.Ohio
+            "model_type": "claude",
+            "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
         }
     ]
 
