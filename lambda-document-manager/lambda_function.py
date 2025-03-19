@@ -689,6 +689,7 @@ def get_contextual_text(whole_text, splitted_text, llm): # per page
     # print('--> contexual rext: ', response)
     output = response.content
     contextual_text = output[output.find('<result>')+8:output.find('</result>')]
+    contextual_text.replace('\n', '')
     
     # print(f"--> whole_text: {whole_text}")
     print(f"--> original_chunk: {splitted_text}")
@@ -731,6 +732,7 @@ def get_contextual_docs_from_chunks(whole_doc, splitted_docs): # per chunk
         # print('--> contexual chunk: ', response)
         output = response.content
         contextualized_chunk = output[output.find('<result>')+8:output.find('</result>')]
+        contexualized_chunks.replace('\n', '')
         contexualized_chunks.append(contextualized_chunk)
         
         print(f"--> {i}: original_chunk: {doc.page_content}")
@@ -776,6 +778,7 @@ def get_contextual_doc(conn, whole_doc, splitted_doc, selected_model): # per chu
     # print('--> contexual chunk: ', response)
     output = response.content
     contextualized_chunk = output[output.find('<result>')+8:output.find('</result>')]
+    contextualized_chunk.replace('\n', '')
     
     print(f"--> original_chunk: {splitted_doc.page_content}")
     print(f"--> contexualized_chunk: {contextualized_chunk}")
@@ -798,8 +801,6 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
     
     contexualized_docs = []
     contexualized_chunks = []  
-    child_connnections = []
-    parent_connections = []
 
     LLM_for_chat = get_model_info(model_name)
 
@@ -815,13 +816,8 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
             print(f"{i}: extract contextual doc[{index}]")        
             parent_conn, child_conn = Pipe()
             parent_connections.append(parent_conn)
-
-            if index < len(LLM_for_chat):
-                parent_conn, child_conn = Pipe()                
-                parent_connections.append(parent_conn)
-                child_connnections.append(child_conn)
                 
-            process = Process(target=get_contextual_doc, args=(child_connnections[i], whole_doc, splitted_docs[index], selected_model))
+            process = Process(target=get_contextual_doc, args=(child_conn, whole_doc, splitted_docs[index], selected_model))
             processes.append(process)
 
             selected_model = selected_model + 1
@@ -1410,19 +1406,15 @@ def extract_page_images_using_parallel_processing(key, pages, nImages, contents,
     LLM_for_chat = get_model_info(model_name)
 
     index = 0
-    parent_connections = []
-    child_connnections = []        
     while index < len(pages):
         processes = []
+        parent_connections = []
         for i in range(len(LLM_for_chat)):
-            print(f"{i}: extract page image[{index}]")        
-
-            if index < len(LLM_for_chat):
-                parent_conn, child_conn = Pipe()                
-                parent_connections.append(parent_conn)
-                child_connnections.append(child_conn)
+            print(f"extract page image[{index}]")        
+            parent_conn, child_conn = Pipe()
+            parent_connections.append(parent_conn)
                 
-            process = Process(target=extract_page_image, args=(child_connnections[i], key, pages[index], index, nImages, contents, texts[index], selected_model))
+            process = Process(target=extract_page_image, args=(child_conn, key, pages[index], index, nImages, contents, texts[index], selected_model))
             processes.append(process)
 
             selected_model = selected_model + 1
