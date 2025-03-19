@@ -804,7 +804,7 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
 
     LLM_for_chat = get_model_info(model_name)
 
-    for i in range(len(whole_doc)):
+    for i in range(len(splitted_docs)):
         print(f"extract contextual doc[{i}]: {splitted_docs[i]}")        
         parent_conn, child_conn = Pipe()
         parent_connections.append(parent_conn)
@@ -867,7 +867,7 @@ def add_to_opensearch(docs, key):
                 parent_docs, contexualized_chunks = get_contextual_docs_using_parallel_processing(docs[-1], splitted_docs)
             else:
                 parent_docs, contexualized_chunks = get_contextual_docs_from_chunks(docs[-1], splitted_docs)
-                
+
             print('parent contextual chunk[0]: ', parent_docs[0].page_content)    
         else:
             parent_docs = splitted_docs  
