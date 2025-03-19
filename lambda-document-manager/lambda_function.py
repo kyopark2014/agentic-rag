@@ -6,6 +6,7 @@ import time
 import docx
 import base64
 import fitz
+import re
 
 from io import BytesIO
 from urllib import parse
@@ -1298,7 +1299,7 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
             encoded_contexual_text = ""  # s3 meta only allows ASCII format
             if contextual_embedding=='Enable' and contexual_text:
                 encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
-                encoded_contexual_text.replace("b'\n", "")
+                encoded_contexual_text = re.sub('\'', '', encoded_contexual_text)
                 print('encoded_contexual_text: ', encoded_contexual_text)
 
             image_key = folder+fname+'.png'
@@ -1375,7 +1376,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
         encoded_contexual_text = ""  # s3 meta only allows ASCII format
         if contextual_embedding=='Enable' and contexual_text:
             encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
-            encoded_contexual_text.replace("b'\n", "")
+            encoded_contexual_text = re.sub('\'', '', encoded_contexual_text)
             print('encoded_contexual_text: ', encoded_contexual_text)
 
         image_key = folder+fname+'.png'
