@@ -799,34 +799,41 @@ def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
     contexualized_docs = []
     contexualized_chunks = []  
 
-    processes = []
-    parent_connections = []
-
     LLM_for_chat = get_model_info(model_name)
 
-    for i in range(len(splitted_docs)):
-        print(f"extract contextual doc[{i}]: {splitted_docs[i]}")        
-        parent_conn, child_conn = Pipe()
-        parent_connections.append(parent_conn)
+    # for i in range(len(splitted_docs)):
+    index = 0
+    while index < len(splitted_docs):
+        print(f"index: {index}")
+
+        processes = []
+        parent_connections = []
+    
+        for i in range(LLM_for_chat):
+            print(f"extract contextual doc[{i}]: {splitted_docs[i]}")        
+            parent_conn, child_conn = Pipe()
+            parent_connections.append(parent_conn)
+                
+            process = Process(target=get_contextual_doc, args=(child_conn, whole_doc, splitted_docs[i], selected_model))
+            processes.append(process)
+
+            selected_model = selected_model + 1
+            if selected_model >= len(LLM_for_chat):
+                selected_model = 0
             
-        process = Process(target=get_contextual_doc, args=(child_conn, whole_doc, splitted_docs[i], selected_model))
-        processes.append(process)
+            index = index + 1
+        for process in processes:
+            process.start()
+                
+        for parent_conn in parent_connections:
+            result = parent_conn.recv()
 
-        selected_model = selected_model + 1
-        if selected_model >= len(LLM_for_chat):
-            selected_model = 0
-    for process in processes:
-        process.start()
-            
-    for parent_conn in parent_connections:
-        result = parent_conn.recv()
+            if result is not None:
+                contexualized_docs.append(result["contexualized_doc"])
+                contexualized_chunks.append(result["contextualized_chunk"])
 
-        if result is not None:
-            contexualized_docs.append(result["contexualized_doc"])
-            contexualized_chunks.append(result["contextualized_chunk"])
-
-    for process in processes:
-        process.join()
+        for process in processes:
+            process.join()
     
     return contexualized_docs, contexualized_chunks
 
@@ -1391,34 +1398,37 @@ def extract_page_images_using_parallel_processing(key, pages, nImages, contents,
     
     files = []    
 
-    processes = []
-    parent_connections = []
-
     LLM_for_chat = get_model_info(model_name)
 
-    for i in range(len(pages)):
-        print(f"extract page image[{i}]: {texts[i]}")        
-        parent_conn, child_conn = Pipe()
-        parent_connections.append(parent_conn)
-            
-        process = Process(target=extract_page_image, args=(child_conn, key, pages[i], i, nImages, contents, texts[i], selected_model))
-        processes.append(process)
+    index = 0
+    while index < len(pages):
+        processes = []
+        parent_connections = []
+        for i in range(len(LLM_for_chat)):
+            print(f"extract page image[{i}]: {texts[i]}")        
+            parent_conn, child_conn = Pipe()
+            parent_connections.append(parent_conn)
+                
+            process = Process(target=extract_page_image, args=(child_conn, key, pages[i], i, nImages, contents, texts[i], selected_model))
+            processes.append(process)
 
-        selected_model = selected_model + 1
-        if selected_model >= len(LLM_for_chat):
-            selected_model = 0
-    for process in processes:
-        process.start()
-            
-    for parent_conn in parent_connections:
-        file = parent_conn.recv()
+            selected_model = selected_model + 1
+            if selected_model >= len(LLM_for_chat):
+                selected_model = 0            
+            index = index+1
 
-        if file is not None:
-            files.append(file)
+        for process in processes:
+            process.start()
+                
+        for parent_conn in parent_connections:
+            file = parent_conn.recv()
 
-    for process in processes:
-        process.join()
-    
+            if file is not None:
+                files.append(file)
+
+        for process in processes:
+            process.join()
+        
     return files
 
 # load documents from s3 for pdf and txt
