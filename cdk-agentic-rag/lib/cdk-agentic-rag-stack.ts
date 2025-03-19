@@ -218,7 +218,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
     let dlq:any[] = [];
     for(let i=0;i<LLM_embedding.length;i++) {
       dlq[i] = new sqs.Queue(this, 'DlqS3EventFifo'+i, {
-        visibilityTimeout: cdk.Duration.seconds(600),
+        visibilityTimeout: cdk.Duration.seconds(900),
         queueName: `dlq-s3-event-for-${projectName}-${i}.fifo`,  
         fifo: true,
         contentBasedDeduplication: false,
