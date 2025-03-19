@@ -1275,6 +1275,7 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
                 print('start contextual embedding for image.')
                 llm = get_model()
                 contexual_text = get_contextual_text(contents, texts[i], llm)
+                contexual_text.replace('\n','')
 
             # save current pdf page to image 
             pixmap = page.get_pixmap(dpi=200)  # dpi=300
@@ -1297,6 +1298,7 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
             encoded_contexual_text = ""  # s3 meta only allows ASCII format
             if contextual_embedding=='Enable' and contexual_text:
                 encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
+                encoded_contexual_text.replace("b'\n", "")
                 print('encoded_contexual_text: ', encoded_contexual_text)
 
             image_key = folder+fname+'.png'
@@ -1350,6 +1352,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
             print('start contextual embedding for image.')
             llm = get_selected_model(selected_model)
             contexual_text = get_contextual_text(contents, text, llm)
+            contexual_text.replace('\n', '')
 
         # save current pdf page to image 
         pixmap = page.get_pixmap(dpi=200)  # dpi=300
@@ -1372,6 +1375,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
         encoded_contexual_text = ""  # s3 meta only allows ASCII format
         if contextual_embedding=='Enable' and contexual_text:
             encoded_contexual_text = contexual_text.encode('ascii', 'ignore').decode('ascii')
+            encoded_contexual_text.replace("b'\n", "")
             print('encoded_contexual_text: ', encoded_contexual_text)
 
         image_key = folder+fname+'.png'
