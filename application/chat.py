@@ -695,7 +695,7 @@ def get_references(docs):
         name = name[name.rfind('/')+1:]
         
         if page:                
-            reference += f"{i+1}. {page}page in [{name}]({url})), {excerpt[:30]}...\n"
+            reference += f"{i+1}. {page} page in [{name}]({url}), {excerpt[:30]}...\n"
         else:
             reference += f"{i+1}. [{name}]({url}), {excerpt[:30]}...\n"
 

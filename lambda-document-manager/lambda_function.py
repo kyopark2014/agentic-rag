@@ -696,7 +696,7 @@ def get_contextual_text(whole_text, splitted_text, llm): # per page
 
     return contextual_text
 
-def get_contextual_docs(whole_doc, splitted_docs): # per chunk
+def get_contextual_docs_from_chunks(whole_doc, splitted_docs): # per chunk
     contextual_template = (
         "<document>"
         "{WHOLE_DOCUMENT}"
@@ -744,6 +744,92 @@ def get_contextual_docs(whole_doc, splitted_docs): # per chunk
         )
     return contexualized_docs, contexualized_chunks
 
+def get_contextual_doc(conn, whole_doc, splitted_doc, selected_model): # per chunk
+    contextual_template = (
+        "<document>"
+        "{WHOLE_DOCUMENT}"
+        "</document>"
+        "Here is the chunk we want to situate within the whole document."
+        "<chunk>"
+        "{CHUNK_CONTENT}"
+        "</chunk>"
+        "Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk."
+        "Answer only with the succinct context and nothing else."
+        "Put it in <result> tags."
+    )
+    
+    contextual_prompt = ChatPromptTemplate([
+        ('human', contextual_template)
+    ])
+        
+    # chat = get_contexual_retrieval_chat()
+    llm = get_selected_model(selected_model)
+    
+    contexual_chain = contextual_prompt | llm
+        
+    response = contexual_chain.invoke(
+        {
+            "WHOLE_DOCUMENT": whole_doc.page_content,
+            "CHUNK_CONTENT": splitted_doc.page_content
+        }
+    )
+    # print('--> contexual chunk: ', response)
+    output = response.content
+    contextualized_chunk = output[output.find('<result>')+8:output.find('</result>')]
+    
+    print(f"--> original_chunk: {splitted_doc.page_content}")
+    print(f"--> contexualized_chunk: {contextualized_chunk}")
+    
+    contexualized_doc = Document(
+        page_content="\n"+contextualized_chunk+"\n\n"+splitted_doc.page_content,
+        metadata=splitted_doc.metadata
+    )
+
+    result = {
+        "contexualized_doc": contexualized_doc,
+        "contextualized_chunk": contextualized_chunk
+    }
+
+    conn.send(result)    
+    conn.close()
+
+def get_contextual_docs_using_parallel_processing(whole_doc, splitted_docs):
+    global selected_model
+    
+    contexualized_docs = []
+    contexualized_chunks = []  
+
+    processes = []
+    parent_connections = []
+
+    LLM_for_chat = get_model_info(model_name)
+
+    for i in range(len(whole_doc)):
+        print(f"extract contextual doc[{i}]: {splitted_docs[i]}")        
+        parent_conn, child_conn = Pipe()
+        parent_connections.append(parent_conn)
+            
+        process = Process(target=get_contextual_doc, args=(child_conn, whole_doc, splitted_docs[i], selected_model))
+        processes.append(process)
+
+        selected_model = selected_model + 1
+        if selected_model >= len(LLM_for_chat):
+            selected_model = 0
+    for process in processes:
+        process.start()
+            
+    for parent_conn in parent_connections:
+        result = parent_conn.recv()
+
+        if result is not None:
+            contexualized_docs.append(result["contexualized_doc"])
+            contexualized_chunks.append(result["contextualized_chunk"])
+
+    for process in processes:
+        process.join()
+    
+    return contexualized_docs, contexualized_chunks
+
 def add_to_opensearch(docs, key):    
     if len(docs) == 0:
         return []    
@@ -777,7 +863,11 @@ def add_to_opensearch(docs, key):
 
         parent_docs = []
         if contextual_embedding == 'Enable':
-            parent_docs, contexualized_chunks = get_contextual_docs(docs[-1], splitted_docs)
+            if multi_region=="Enable":
+                parent_docs, contexualized_chunks = get_contextual_docs_using_parallel_processing(docs[-1], splitted_docs)
+            else:
+                parent_docs, contexualized_chunks = get_contextual_docs_from_chunks(docs[-1], splitted_docs)
+                
             print('parent contextual chunk[0]: ', parent_docs[0].page_content)    
         else:
             parent_docs = splitted_docs  
