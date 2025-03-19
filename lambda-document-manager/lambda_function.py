@@ -1217,10 +1217,10 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
 
     return files
 
-def extract_page_image(key, page, i, nImages, contents, text, selected_model):
-    files = []
+def extract_page_image(conn, key, page, i, nImages, contents, text, selected_model):
     print(f"page[{i}]: {page}")
-        
+
+    file = ""        
     imgInfo = page.get_image_info()
     print(f"imgInfo[{i}]: {imgInfo}")
     
@@ -1288,9 +1288,10 @@ def extract_page_image(key, page, i, nImages, contents, text, selected_model):
         )
         print('response: ', response)
                                         
-        files.append(image_key)
-
-    return files
+        file = image_key
+    
+    conn.send(file)
+    conn.close()
 
 def extract_page_images_using_parallel_processing(key, pages, nImages, contents, texts):
     global selected_model
