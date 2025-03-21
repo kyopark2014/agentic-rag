@@ -852,11 +852,11 @@ def add_to_opensearch(docs, key):
         return []    
     #print('docs[0]: ', docs[0])       
     
-    objectName = (key[key.find(s3_prefix)+len(s3_prefix)+1:len(key)])
-    print('objectName: ', objectName)    
-    metadata_key = meta_prefix+objectName+'.metadata.json'
-    print('meta file name: ', metadata_key)    
-    delete_document_if_exist(metadata_key)
+    # objectName = (key[key.find(s3_prefix)+len(s3_prefix)+1:len(key)])
+    # print('objectName: ', objectName)    
+    # metadata_key = meta_prefix+objectName+'.metadata.json'
+    # print('meta file name: ', metadata_key)    
+    # delete_document_if_exist(metadata_key)
         
     ids = []
     if enableParentDocumentRetrival == 'true':
