@@ -279,7 +279,7 @@ def delete_document_if_exist(metadata_key):
             
             # delete ids
             result = vectorstore.delete(ids)
-            print('result: ', result)   
+            print('delete ids in vectorstore: ', result)   
             
             # delete files 
             files = json.loads(meta)['files']
