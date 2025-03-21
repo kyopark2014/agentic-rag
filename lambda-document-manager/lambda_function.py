@@ -1019,6 +1019,12 @@ def extract_images_from_pdf(reader, key):
                 # print('folder: ', folder)
                             
                 img_key = folder+img_name
+
+                # s3의 object가 있는지 확인
+                response = s3_client.head_object(Bucket=s3_bucket, Key=img_key)
+                print("head_object response: ", response)
+
+
                 
                 response = s3_client.put_object(
                     Bucket=s3_bucket,
