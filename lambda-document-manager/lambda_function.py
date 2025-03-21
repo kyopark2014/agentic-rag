@@ -1351,7 +1351,10 @@ def delete_if_exist(bucket, key):
                 object.delete()
             
             # delete metadata of the object
-            objectName = (key[key.find(bucket)+len(bucket)+1:len(key)])
+            if key.rfind('/'):
+                objectName = key[key.rfind('/')+1:]
+            else:
+                objectName = key
             print('objectName: ', objectName)    
             metadata_key = meta_prefix+objectName+'.metadata.json'
             print('meta file name: ', metadata_key)    
