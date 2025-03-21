@@ -1334,20 +1334,41 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
 
     return files
 
+s3r = boto3.resource("s3")
 def delete_if_exist(bucket, key):
-    s3r = boto3.resource("s3")
-    response = s3_client.head_object(Bucket=s3_bucket, Key=key)
-    print("head_object response: ", response)
-    if "ResponseMetadata" in response:
-        ResponseMetadata = response["ResponseMetadata"]
-        print("ResponseMetadata: ", ResponseMetadata)
-        if "HTTPStatusCode" in ResponseMetadata["HTTPStatusCode"]:
-            statusCode = ResponseMetadata["HTTPStatusCode"]
-            print("statusCode: ", statusCode)
-            if statusCode==200:
-                s3r.Object(bucket, key).delete()
-                time.sleep(3)
-                print('delete file: ', key)    
+    # try: 
+    #     response = s3_client.head_object(Bucket=s3_bucket, Key=key)
+    #     print("head_object response: ", response)
+    #     if "ResponseMetadata" in response:
+    #         ResponseMetadata = response["ResponseMetadata"]
+    #         print("ResponseMetadata: ", ResponseMetadata)
+    #         if "HTTPStatusCode" in ResponseMetadata["HTTPStatusCode"]:
+    #             statusCode = ResponseMetadata["HTTPStatusCode"]
+    #             print("statusCode: ", statusCode)
+    #             if statusCode==200:                    
+    #                 s3r.Object(bucket, key).delete()
+    #                 time.sleep(3)
+    #                 print('delete file: ', key)    
+    # except Exception:
+    #     err_msg = traceback.format_exc()
+    #     print('err_msg: ', err_msg)
+
+    try: 
+        s3r = boto3.resource("s3")
+        bucket = s3r.Bucket(s3_bucket)
+        objs = list(bucket.objects.filter(Prefix=key))
+        print('objs: ', objs)
+        
+        if(len(objs)>0):
+            # delete files 
+            s3r.Object(s3_bucket, key).delete()
+            print('delete file: ', key)
+            
+    except Exception:
+        err_msg = traceback.format_exc()
+        print('error message: ', err_msg)        
+        raise Exception ("Not able to create meta file")
+
             
 def extract_page_image(conn, key, page, i, nImages, contents, text, selected_model):
     print(f"page[{i}]: {page}")
