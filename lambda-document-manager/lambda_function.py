@@ -1020,7 +1020,6 @@ def extract_images_from_pdf(reader, key):
                             
                 img_key = folder+img_name
 
-                # s3의 object가 있는지 확인
                 response = s3_client.head_object(Bucket=s3_bucket, Key=img_key)
                 print("head_object response: ", response)
 
@@ -1389,6 +1388,10 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
             print('encoded_contexual_text: ', encoded_contexual_text)
 
         image_key = folder+fname+'.png'
+
+        response = s3_client.head_object(Bucket=s3_bucket, Key=image_key)
+        print("head_object response: ", response)
+
         response = s3_client.put_object(
             Bucket=s3_bucket,
             Key=image_key,
