@@ -176,6 +176,7 @@ def run_reflection(query, st):
         draft: str
         reflection: list
         search_queries: list
+        revision_number: int
             
     def generate(state: State, config):    
         logger.info(f"###### generate ######")
