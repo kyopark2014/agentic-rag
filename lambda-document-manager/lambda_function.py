@@ -1334,6 +1334,21 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
 
     return files
 
+def delete_if_exist(bucket, key):
+    s3r = boto3.resource("s3")
+    response = s3_client.head_object(Bucket=s3_bucket, Key=key)
+    print("head_object response: ", response)
+    if "ResponseMetadata" in response:
+        ResponseMetadata = response["ResponseMetadata"]
+        print("ResponseMetadata: ", ResponseMetadata)
+        if "HTTPStatusCode" in ResponseMetadata["HTTPStatusCode"]:
+            statusCode = ResponseMetadata["HTTPStatusCode"]
+            print("statusCode: ", statusCode)
+            if statusCode==200:
+                s3r.Object(bucket, key).delete()
+                time.sleep(3)
+                print('delete file: ', key)    
+            
 def extract_page_image(conn, key, page, i, nImages, contents, text, selected_model):
     print(f"page[{i}]: {page}")
 
@@ -1389,8 +1404,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
 
         image_key = folder+fname+'.png'
 
-        response = s3_client.head_object(Bucket=s3_bucket, Key=image_key)
-        print("head_object response: ", response)
+        delete_if_exist(s3_bucket, image_key)
 
         response = s3_client.put_object(
             Bucket=s3_bucket,
