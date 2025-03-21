@@ -1336,35 +1336,19 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
 
 s3r = boto3.resource("s3")
 def delete_if_exist(bucket, key):
-    # try: 
-    #     response = s3_client.head_object(Bucket=s3_bucket, Key=key)
-    #     print("head_object response: ", response)
-    #     if "ResponseMetadata" in response:
-    #         ResponseMetadata = response["ResponseMetadata"]
-    #         print("ResponseMetadata: ", ResponseMetadata)
-    #         if "HTTPStatusCode" in ResponseMetadata["HTTPStatusCode"]:
-    #             statusCode = ResponseMetadata["HTTPStatusCode"]
-    #             print("statusCode: ", statusCode)
-    #             if statusCode==200:                    
-    #                 s3r.Object(bucket, key).delete()
-    #                 time.sleep(3)
-    #                 print('delete file: ', key)    
-    # except Exception:
-    #     err_msg = traceback.format_exc()
-    #     print('err_msg: ', err_msg)
-
     try: 
         s3r = boto3.resource("s3")
-        bucket = s3r.Bucket(s3_bucket)
+        bucket = s3r.Bucket(bucket)
         objs = list(bucket.objects.filter(Prefix=key))
         print('objs: ', objs)
         
         # if(len(objs)>0):
         if(len(objs)>0):
-            s3r.Object(s3_bucket, key).delete()
+            # delete the object
+            s3r.Object(bucket, key).delete()
             print('delete file: ', key)
 
-            # delete metadata
+            # delete metadata of the object
             objectName = (key[key.find(bucket)+len(bucket)+1:len(key)])
             print('objectName: ', objectName)    
             metadata_key = meta_prefix+objectName+'.metadata.json'
