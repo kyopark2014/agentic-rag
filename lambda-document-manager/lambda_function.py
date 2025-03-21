@@ -1023,8 +1023,9 @@ def extract_images_from_pdf(reader, key):
                 response = s3_client.head_object(Bucket=s3_bucket, Key=img_key)
                 print("head_object response: ", response)
 
+                delete_if_exist(s3_bucket, img_key)
 
-                
+                print('create an image: ', img_key)
                 response = s3_client.put_object(
                     Bucket=s3_bucket,
                     Key=img_key,
@@ -1085,7 +1086,10 @@ def extract_images_from_pptx(prs, key):
                 print('fname: ', fname)
                         
                 img_key = folder+fname+'.png'
-                        
+
+                delete_if_exist(s3_bucket, img_key)
+                
+                print('create an image: ', img_key)                        
                 response = s3_client.put_object(
                     Bucket=s3_bucket,
                     Key=img_key,
@@ -1174,6 +1178,9 @@ def extract_images_from_docx(doc_contents, key):
             img_key = folder+fname+'.'+ext
             print('img_key: ', img_key)
             
+            delete_if_exist(s3_bucket, img_key)
+                
+            print('create an image: ', img_key)
             response = s3_client.put_object(
                 Bucket=s3_bucket,
                 Key=img_key,
@@ -1236,9 +1243,14 @@ def extract_table_image(key, page, index, table_count, bbox):
                                 
     fname = 'table_'+key.split('/')[-1].split('.')[0]+f"_{table_count}"
 
+    table_key = folder+fname+'.png'
+
+    delete_if_exist(s3_bucket, table_key)
+                
+    print('create an table: ', table_key)
     response = s3_client.put_object(
         Bucket=s3_bucket,
-        Key=folder+fname+'.png',
+        Key=table_key,
         ContentType='image/png',
         Metadata = {
             "type": 'table',
@@ -1312,6 +1324,10 @@ def extract_page_images_from_pdf(key, pages, nImages, contents, texts):
                 print('encoded_contexual_text: ', encoded_contexual_text)
 
             image_key = folder+fname+'.png'
+
+            delete_if_exist(s3_bucket, image_key)
+                
+            print('create an table: ', image_key)
             response = s3_client.put_object(
                 Bucket=s3_bucket,
                 Key=image_key,
