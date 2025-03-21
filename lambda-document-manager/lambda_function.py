@@ -1345,9 +1345,11 @@ def delete_if_exist(bucket, key):
         # if(len(objs)>0):
         if(len(objs)>0):
             # delete the object            
-            s3r.Object(bucket, key).delete()
-            print('delete file: ', key)
-
+            print(f"delete -> bucket: {bucket}, key: {key}")
+            for object in bucket.objects.filter(Prefix=key):
+                print('object: ', object)
+                object.delete()
+            
             # delete metadata of the object
             objectName = (key[key.find(bucket)+len(bucket)+1:len(key)])
             print('objectName: ', objectName)    
