@@ -1344,7 +1344,7 @@ def delete_if_exist(bucket, key):
         
         # if(len(objs)>0):
         if(len(objs)>0):
-            # delete the object
+            # delete the object            
             s3r.Object(bucket, key).delete()
             print('delete file: ', key)
 
@@ -1415,6 +1415,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
             print('encoded_contexual_text: ', encoded_contexual_text)
 
         image_key = folder+fname+'.png'
+        print('image_key: ', image_key)
 
         delete_if_exist(s3_bucket, image_key)
 
