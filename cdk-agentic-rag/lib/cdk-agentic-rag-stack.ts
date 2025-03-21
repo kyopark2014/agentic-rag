@@ -128,7 +128,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
       principals: [new iam.AnyPrincipal()],      
     });  
 
-  /*  const domain = new opensearch.Domain(this, 'Domain', {
+    const domain = new opensearch.Domain(this, 'Domain', {
       version: opensearch.EngineVersion.OPENSEARCH_2_3,
       
       domainName: domainName,
@@ -169,8 +169,8 @@ export class CdkAgenticRagStack extends cdk.Stack {
     new cdk.CfnOutput(this, `Endpoint-of-OpenSearch-for-${projectName}`, {
       value: 'https://'+domain.domainEndpoint,
       description: 'The endpoint of OpenSearch Domain',
-    }); 
-    opensearch_url = 'https://'+domain.domainEndpoint; */
+    });
+    opensearch_url = 'https://'+domain.domainEndpoint;
 
     const apiInvokePolicy = new iam.PolicyStatement({ 
       // resources: ['arn:aws:execute-api:*:*:*'],
