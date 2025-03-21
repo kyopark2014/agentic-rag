@@ -1359,16 +1359,23 @@ def delete_if_exist(bucket, key):
         objs = list(bucket.objects.filter(Prefix=key))
         print('objs: ', objs)
         
+        # if(len(objs)>0):
         if(len(objs)>0):
-            # delete files 
             s3r.Object(s3_bucket, key).delete()
             print('delete file: ', key)
+
+            # delete metadata
+            objectName = (key[key.find(bucket)+len(bucket)+1:len(key)])
+            print('objectName: ', objectName)    
+            metadata_key = meta_prefix+objectName+'.metadata.json'
+            print('meta file name: ', metadata_key)    
+            delete_document_if_exist(metadata_key)
+            time.sleep(2)
             
     except Exception:
         err_msg = traceback.format_exc()
         print('error message: ', err_msg)        
         raise Exception ("Not able to create meta file")
-
             
 def extract_page_image(conn, key, page, i, nImages, contents, text, selected_model):
     print(f"page[{i}]: {page}")
@@ -1427,6 +1434,7 @@ def extract_page_image(conn, key, page, i, nImages, contents, text, selected_mod
 
         delete_if_exist(s3_bucket, image_key)
 
+        print('create an image: ', image_key)
         response = s3_client.put_object(
             Bucket=s3_bucket,
             Key=image_key,
