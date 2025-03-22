@@ -1415,7 +1415,7 @@ def run_corrective_rag(query, st):
         documents : List[str]
 
     def retrieve_node(state: State):
-        logger.info(f"p###### retrieve ######")
+        logger.info(f"###### retrieve ######")
         question = state["question"]
 
         if debug_mode=="Enable":

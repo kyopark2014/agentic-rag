@@ -1,6 +1,5 @@
 import utils
 import chat
-import utils
 import json
 from langchain_community.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
 from opensearchpy import OpenSearch
@@ -8,17 +7,7 @@ from langchain.docstore.document import Document
 
 logger = utils.CreateLogger("rag-opensearch")
 
-try:
-    with open("/home/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
-
-except Exception:
-    print("use local configuration")
-    logger.info(f"use local configuration")
-    with open("application/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
+config = utils.load_config()
 
 opensearch_url = config["opensearch_url"] if "opensearch_url" in config else None
 if opensearch_url is None:

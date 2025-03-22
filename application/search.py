@@ -20,18 +20,7 @@ from typing import Literal
 logger = utils.CreateLogger("chat")
 
 # load config
-try:
-    with open("/home/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
-
-        logger.info("Ready to write log (chat)!")
-        
-except Exception:
-    logger.info(f"use local configuration")
-    with open("application/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
+config = utils.load_config()
 
 bedrock_region = config["region"] if "region" in config else "us-west-2"
 projectName = config["projectName"] if "projectName" in config else "agentic-workflow"
