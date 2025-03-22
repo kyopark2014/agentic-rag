@@ -21,7 +21,10 @@ def get_cost_analysis():
         start_date = end_date - timedelta(days=30)
         
         # cost explorer
-        ce = boto3.client('ce')
+        ce = boto3.client(
+            service_name='ce',
+            region_name=chat.bedrock_region
+        )
 
         # service cost
         service_response = ce.get_cost_and_usage(
