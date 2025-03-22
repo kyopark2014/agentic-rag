@@ -449,8 +449,8 @@ print(image_base64)
     return result
 
 def run_agent_executor(query, historyMode, st):
-    chatModel = chat.get_chat(chat.reasoning_mode)
-    model = chatModel.bind_tools(tools)
+    logger.info(f"###### run_agent_executor ######")
+    logger.info(f"historyMode: {historyMode}")
 
     class State(TypedDict):
         # messages: Annotated[Sequence[BaseMessage], operator.add]
@@ -462,6 +462,8 @@ def run_agent_executor(query, historyMode, st):
     else:
         tools = [get_current_time, get_book_list, get_weather_info, search_by_opensearch, stock_data_lookup, repl_drawer, repl_coder]
 
+    chatModel = chat.get_chat(chat.reasoning_mode)
+    model = chatModel.bind_tools(tools)
     tool_node = ToolNode(tools)
 
     def should_continue(state: State) -> Literal["continue", "end"]:
