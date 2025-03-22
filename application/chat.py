@@ -139,7 +139,8 @@ selected_embedding = 0
 
 model_name = "Nova Pro"
 model_type = "nova"
-multi_region = 'Enable'
+multi_region = "Enable"
+internet_mode = "Enable"
 contextual_embedding = "Disable"
 ocr_mode = "Disable"
 debug_mode = "Enable"
@@ -149,8 +150,8 @@ number_of_models = len(models)
 selected_chat = 0
 
 reasoning_mode = 'Disable'
-def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode, ocr):    
-    global model_name, debug_mode, multi_region, contextual_embedding, ocr_mode 
+def update(modelName, debugMode, multiRegion, internetMode, contextualEmbedding, reasoningMode, ocr):    
+    global model_name, debug_mode, multi_region, internet_mode, contextual_embedding, ocr_mode 
     global selected_chat, selected_embedding, models, number_of_models, reasoning_mode
     
     if model_name != modelName:
@@ -172,6 +173,8 @@ def update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode
         
         selected_chat = 0
         selected_embedding = 0
+
+    internet_mode = "Enable" if internetMode=="Enable" else "Disable"
 
     if contextual_embedding != contextualEmbedding:
         contextual_embedding = contextualEmbedding

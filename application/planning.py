@@ -130,14 +130,13 @@ def run_planning(query, st):
         plan = state["plan"]
         logger.info(f"plan: {plan}")
         
-        llm = chat.get_chat(extended_thinking="Disable")
-
         if chat.debug_mode=="Enable":
             st.info(f"검색을 수행합니다. 검색어 {plan[0]}")
         
         # retrieve
-        relevant_docs = rag.retrieve_documents_from_opensearch(plan[0], top_k=4)     
-        relevant_docs += search.retrieve_documents_from_tavily(plan[0], top_k=4)
+        relevant_docs = rag.retrieve_documents_from_opensearch(plan[0], top_k=4)   
+        if chat.internet_mode == "Enable":  
+            relevant_docs += search.retrieve_documents_from_tavily(plan[0], top_k=4)
         
         # grade   
         if chat.debug_mode == "Enable":
@@ -179,7 +178,8 @@ def run_planning(query, st):
         logger.info(f"state of replan node: {state}")
 
         if len(state["plan"]) == 1:
-            logger.info(f"last plan: {state['plan']}")
+            logger.info(f"last plan: {state["plan"]}")
+            logger.info(f"final info: {state["info"][-1]}")
             return {"response":state["info"][-1]}
         
         if chat.debug_mode=="Enable":
@@ -255,7 +255,7 @@ def run_planning(query, st):
         else:
             logger.info(f"plan: {state['plan']}")
             next = "continue"
-        logger.info(f"hould_end response: {next}")
+        logger.info(f"should_end response: {next}")
         
         return next
         

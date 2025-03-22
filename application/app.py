@@ -96,6 +96,11 @@ with st.sidebar:
     debugMode = 'Enable' if select_debugMode else 'Disable'
     #print('debugMode: ', debugMode)
 
+    # internet checkbox
+    select_internet = st.checkbox('internet', value=True)
+    internetMode = 'Enable' if select_internet else 'Disable'
+    #print('internetMode: ', internetMode)
+
     # multi region check box
     select_multiRegion = st.checkbox('Multi Region', value=False)
     multiRegion = 'Enable' if select_multiRegion else 'Disable'
@@ -121,7 +126,7 @@ with st.sidebar:
     chart = 'Enable' if selected_chart else 'Disable'
     #print('chart: ', chart)
 
-    chat.update(modelName, debugMode, multiRegion, contextualEmbedding, reasoningMode, ocr)
+    chat.update(modelName, debugMode, multiRegion, internetMode, contextualEmbedding, reasoningMode, ocr)
     
     st.success(f"Connected to {modelName}", icon="💚")
     clear_button = st.button("대화 초기화", key="clear")

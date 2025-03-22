@@ -192,7 +192,8 @@ def run_reflection(query, st):
 
         top_k = 4
         relevant_docs = rag.retrieve_documents_from_opensearch(query, top_k=top_k)  
-        relevant_docs += search.retrieve_documents_from_tavily(query, top_k=top_k)
+        if chat.internet_mode == "Enable":
+            relevant_docs += search.retrieve_documents_from_tavily(query, top_k=top_k)
     
         # grade   
         if chat.debug_mode == "Enable":

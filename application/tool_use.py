@@ -448,9 +448,6 @@ print(image_base64)
     logger.info(f"result: {result}")
     return result
 
-#tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, code_interpreter]
-tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, repl_drawer, repl_coder]
-
 def run_agent_executor(query, historyMode, st):
     chatModel = chat.get_chat(chat.reasoning_mode)
     model = chatModel.bind_tools(tools)
@@ -458,6 +455,12 @@ def run_agent_executor(query, historyMode, st):
     class State(TypedDict):
         # messages: Annotated[Sequence[BaseMessage], operator.add]
         messages: Annotated[list, add_messages]
+
+    if chat.internet_mode == "Eanble":
+        #tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, code_drawer, code_interpreter]
+        tools = [get_current_time, get_book_list, get_weather_info, search_by_tavily, search_by_opensearch, stock_data_lookup, repl_drawer, repl_coder]
+    else:
+        tools = [get_current_time, get_book_list, get_weather_info, search_by_opensearch, stock_data_lookup, repl_drawer, repl_coder]
 
     tool_node = ToolNode(tools)
 
