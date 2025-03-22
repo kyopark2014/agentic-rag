@@ -491,7 +491,7 @@ tool_node = ToolNode(tools)
 
 ### Corrective RAG
 
-[Corrective RAG(CRAG)](https://github.com/kyopark2014/langgraph-agent/blob/main/corrective-rag-agent.md)는 retrival/grading 후에 질문을 rewrite한 후 인터넷 검색에서 얻어진 결과로 RAG의 성능을 강화하는 방법입니다. 
+[Corrective RAG(CRAG)](https://github.com/kyopark2014/langgraph-agent/blob/main/corrective-rag-agent.md)는 retrieval/grading 후에 질문을 rewrite한 후 인터넷 검색에서 얻어진 결과로 RAG의 성능을 강화하는 방법입니다. 
 
 ![image](https://github.com/user-attachments/assets/27228159-b307-4588-8a8a-61d8deaa90e3)
 
