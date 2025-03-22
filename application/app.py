@@ -35,10 +35,10 @@ mode_descriptions = {
         "Self Corrective RAG를 활용하여 RAG의 성능을 향상 시킵니다."
     ],
     "Agent (Reflection)": [
-        "Reflection Workflow를 수행하는 Agent 구현합니다."
+        "Reflection Workflow를 수행하는 Agent을 구현합니다."
     ],
     "Agent (Planning)": [
-        "Planning Workflow를 수행하는 Agent 구현합니다."
+        "Planning Workflow를 수행하는 Agent을 구현합니다."
     ],
     "번역하기": [
         "한국어와 영어에 대한 번역을 제공합니다. 한국어로 입력하면 영어로, 영어로 입력하면 한국어로 번역합니다."        
