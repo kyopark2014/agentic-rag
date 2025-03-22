@@ -178,9 +178,9 @@ def run_planning(query, st):
         logger.info(f"state of replan node: {state}")
 
         if len(state["plan"]) == 1:
-            logger.info(f"last plan: {state["plan"]}")
-            logger.info(f"final info: {state["info"][-1]}")
-            return {"response":state["info"][-1]}
+            logger.info(f"last plan: {state['plan']}")
+            logger.info(f"final info: {state['info'][-1]}")
+            return {"response":state['info'][-1]}
         
         if chat.debug_mode=="Enable":
             st.info(f"새로운 계획을 생성합니다.")
