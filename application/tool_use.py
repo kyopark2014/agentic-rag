@@ -142,7 +142,7 @@ def search_by_opensearch(keyword: str) -> str:
     logger.info(f"modified keyword: {keyword}")
     
     # retrieve
-    relevant_docs = rag.retrieve_documents_from_opensearch(keyword, top_k=2)                            
+    relevant_docs = rag.retrieve_documents_from_opensearch(keyword, top_k=4)
     logger.info(f"relevant_docs length: {len(relevant_docs)}")
 
     # grade  
@@ -185,14 +185,17 @@ def search_by_tavily(keyword: str) -> str:
     keyword = keyword.replace('\'','')
     relevant_documents = search.retrieve_documents_from_tavily(keyword, top_k=3)
 
+    # grade  
+    filtered_docs = chat.grade_documents(keyword, relevant_documents)
+
     answer = ""
-    for doc in reference_docs:
+    for doc in filtered_docs:
         content = doc.page_content
         url = doc.metadata['url']
         answer += + f"{content}, URL: {url}\n" 
 
-    if len(relevant_documents):
-        reference_docs += relevant_documents
+    if len(filtered_docs):
+        reference_docs += filtered_docs
 
     if answer == "":
         # answer = "No relevant documents found." 
