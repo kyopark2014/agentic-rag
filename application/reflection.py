@@ -188,7 +188,7 @@ def run_reflection(query, st):
 
         # grade   
         if chat.debug_mode == "Enable":
-            st.info(f"초안(draft)를 생성하기 위하여, RAG와 인터넷을 조회합니다.") 
+            st.info(f"초안(draft)를 생성하기 위하여, 정보를 조회합니다.") 
 
         top_k = 4
         relevant_docs = rag.retrieve_documents_from_opensearch(query, top_k=top_k)  
@@ -321,7 +321,9 @@ def run_reflection(query, st):
                 st.info(f"검색을 수행합니다. 검색어: {q}")
         
             relevant_docs = rag.retrieve_documents_from_opensearch(q, top_k)     
-            relevant_docs += search.retrieve_documents_from_tavily(q, top_k)
+
+            if chat.internet_mode=="Enable":
+                relevant_docs += search.retrieve_documents_from_tavily(q, top_k)
 
             # grade   
             if chat.debug_mode == "Enable":
