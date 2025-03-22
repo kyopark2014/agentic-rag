@@ -79,17 +79,7 @@ def initiate():
 initiate()
 
 # load config
-try:
-    with open("/home/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
-
-except Exception:
-    print("use local configuration")
-    logger.info(f"use local configuration")
-    with open("application/config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-        logger.info(f"config: {config}")
+config = utils.load_config()
 
 bedrock_region = config["region"] if "region" in config else "us-west-2"
 
@@ -727,7 +717,10 @@ def extract_thinking_tag(response, st):
 
 # load csv documents from s3
 def load_csv_document(s3_file_name):
-    s3r = boto3.resource("s3")
+    s3r = boto3.resource(
+        service_name='s3',
+        region_name=bedrock_region
+    )
     doc = s3r.Object(s3_bucket, s3_prefix+'/'+s3_file_name)
 
     lines = doc.get()['Body'].read().decode('utf-8').split('\n')   # read csv per line
@@ -799,7 +792,10 @@ def get_summary(docs):
 
 # load documents from s3 for pdf and txt
 def load_document(file_type, s3_file_name):
-    s3r = boto3.resource("s3")
+    s3r = boto3.resource(
+        service_name='s3',
+        region_name=bedrock_region
+    )
     doc = s3r.Object(s3_bucket, s3_prefix+'/'+s3_file_name)
     
     contents = ""
@@ -992,7 +988,10 @@ def get_summary_of_uploaded_file(file_name, st):
         msg = get_summary(contexts)
         
     elif file_type == 'py' or file_type == 'js':
-        s3r = boto3.resource("s3")
+        s3r = boto3.resource(
+            service_name='s3',
+            region_name=bedrock_region
+        )
         doc = s3r.Object(s3_bucket, s3_prefix+'/'+file_name)
         
         contents = doc.get()['Body'].read().decode('utf-8')
@@ -1004,7 +1003,10 @@ def get_summary_of_uploaded_file(file_name, st):
     elif file_type == 'png' or file_type == 'jpeg' or file_type == 'jpg':
         logger.info(f"multimodal: {file_name}")
         
-        s3_client = boto3.client('s3') 
+        s3_client = boto3.client(
+            service_name='s3',
+            region_name=bedrock_region
+        )
             
         if debug_mode=="Enable":
             status = "이미지를 가져옵니다."
