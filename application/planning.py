@@ -159,7 +159,7 @@ def run_planning(query, st):
         result = generate_answer(relevant_docs, plan[0])
         
         logger.info(f"task: {plan[0]}")
-        logger.info(f"executor outpu: {result}")
+        logger.info(f"executor output: {result}")
 
         if chat.debug_mode=="Enable":
             st.info(f"현 단계의 결과 {result}")
@@ -247,7 +247,7 @@ def run_planning(query, st):
         
     def should_end(state: State) -> Literal["continue", "end"]:
         logger.info(f"#### should_end ####")
-        print('state: ', state)
+        logger.info(f"print('state: {state}")
         
         if "response" in state and state["response"]:
             logger.info(f"response: {state['response']}")

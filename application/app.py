@@ -97,7 +97,7 @@ with st.sidebar:
     #print('debugMode: ', debugMode)
 
     # internet checkbox
-    select_internet = st.checkbox('internet', value=True)
+    select_internet = st.checkbox('internet', value=False)
     internetMode = 'Enable' if select_internet else 'Disable'
     #print('internetMode: ', internetMode)
 
