@@ -21,6 +21,7 @@ def run_planning(query, st):
         plan: list[str]
         past_steps: Annotated[List[Tuple], operator.add]
         info: Annotated[List[Tuple], operator.add]
+        response: list[str]
         answer: str
 
     def plan_node(state: State, config):
@@ -247,7 +248,7 @@ def run_planning(query, st):
         
     def should_end(state: State) -> Literal["continue", "end"]:
         logger.info(f"#### should_end ####")
-        logger.info(f"print('state: {state}")
+        logger.info(f"state: {state}")
         
         if "response" in state and state["response"]:
             logger.info(f"response: {state['response']}")
