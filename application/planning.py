@@ -247,7 +247,7 @@ def run_planning(query, st):
         
     def should_end(state: State) -> Literal["continue", "end"]:
         logger.info(f"#### should_end ####")
-        # print('state: ', state)
+        print('state: ', state)
         
         if "response" in state and state["response"]:
             logger.info(f"response: {state['response']}")
