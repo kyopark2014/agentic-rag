@@ -493,6 +493,12 @@ tool_node = ToolNode(tools)
 
 [Corrective RAG(CRAG)](https://github.com/kyopark2014/langgraph-agent/blob/main/corrective-rag-agent.md)는 retrieval/grading 후에 질문을 rewrite한 후 인터넷 검색에서 얻어진 결과로 RAG의 성능을 강화하는 방법입니다. 
 
+아래는 PUML로 그린 graph 입니다.
+
+![image](https://github.com/user-attachments/assets/1526adcd-9226-4db0-9e4b-6bd01d8f6c04)
+
+아래는 LangGraph Builder로 그린 graph 입니다. 
+
 <img src="https://github.com/user-attachments/assets/67be90cf-7296-4381-a30c-d92b7c2638a5" width="400">
 
 
@@ -528,7 +534,14 @@ workflow.add_edge("generate", END)
 
 [Self RAG](https://github.com/kyopark2014/langgraph-agent/blob/main/self-rag.md)는 retrieve/grading 후에 generation을 수행하는데, grading의 결과에 따라 필요시 rewtire후 retrieve를 수행하며, 생성된 결과가 hallucination인지, 답변이 적절한지를 판단하여 필요시 rewtire / retrieve를 반복합니다. 
 
+아래는 PUML로 그린 graph 입니다.
+
 ![image](https://github.com/user-attachments/assets/b1f2db6c-f23f-4382-86f6-0fa7d3fe0595)
+
+아래는 LangGraph Builder로 그린 graph 입니다. 
+
+![builder-self-rag](https://github.com/user-attachments/assets/aeb740a7-abba-451a-9c36-3f358a6653c6)
+
 
 Self RAG의 workflow는 아래와 같습니다.
 
