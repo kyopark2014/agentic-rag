@@ -583,7 +583,13 @@ workflow.add_conditional_edges(
 
 Self Corrective RAG는 Self RAG처럼 retrieve / generate 후에 hallucination인지 답변이 적절한지 확인후 필요시 질문을 rewrite하거나 인터넷 검색을 통해 RAG의 성능을 향상시키는 방법입니다. 
 
+아래는 PUML로 그린 graph 입니다.
+
 ![image](https://github.com/user-attachments/assets/9a18f7f9-0249-42f7-983e-c5a7f9d18682)
+
+아래는 LangGraph Builder로 그린 graph 입니다. 
+
+<img src="https://github.com/user-attachments/assets/a42371e8-852a-4cd4-91ab-4095a128ce07" width="600">
 
 Self Corrective RAG의 workflow는 아래와 같습니다. 
 
