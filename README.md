@@ -495,6 +495,11 @@ tool_node = ToolNode(tools)
 
 ![image](https://github.com/user-attachments/assets/27228159-b307-4588-8a8a-61d8deaa90e3)
 
+![builder-crag](https://github.com/user-attachments/assets/cd694617-fe01-41d8-92e3-0dc3df3f8ca1)
+
+
+
+
 CRAG의 workflow는 아래와 같습니다. 
 
 ```python
