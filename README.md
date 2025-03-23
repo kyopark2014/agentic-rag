@@ -389,9 +389,7 @@ LangSmith에서 확인한 동작은 아래와 같습니다.
 
 아래는 LangGraph Builder로 그린 graph 입니다. 
 
-<img src="https://github.com/user-attachments/assets/7650819d-5abf-46d5-8a2c-820351e9404c" width="400">
-
-<img src="https://github.com/user-attachments/assets/e58b29cd-c94a-4c72-8452-a84de4b0051e" width="400">
+<img src="https://github.com/user-attachments/assets/e58b29cd-c94a-4c72-8452-a84de4b0051e" width="450">
 
 
 
