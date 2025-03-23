@@ -383,7 +383,13 @@ LangSmith에서 확인한 동작은 아래와 같습니다.
 
 아래와 같이 activity diagram을 이용하여 node/edge/conditional edge로 구성되는 tool use 방식의 agent를 구현할 수 있습니다.
 
+아래는 PUML로 그린 graph 입니다.
+
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/59c8dc05-c79c-4f63-b1ab-964dec259203"/>
+
+아래는 LangGraph Builder로 그린 graph 입니다. 
+
+<img src="https://github.com/user-attachments/assets/7650819d-5abf-46d5-8a2c-820351e9404c" width="300">
 
 
 Tool use 방식 agent의 workflow는 아래와 같습니다. Fuction을 선택하는 call model 노드과 실행하는 tool 노드로 구성됩니다. 선택된 tool의 결과에 따라 cycle형태로 추가 실행을 하거나 종료하면서 결과를 전달할 수 있습니다.
