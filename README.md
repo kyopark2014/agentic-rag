@@ -597,8 +597,6 @@ Self Corrective RAG는 Self RAG처럼 retrieve / generate 후에 hallucination�
 
 아래는 LangGraph Builder로 그린 graph 입니다. 
 
-<img src="https://github.com/user-attachments/assets/a42371e8-852a-4cd4-91ab-4095a128ce07" width="600">
-
 <img src="https://github.com/user-attachments/assets/af4faff1-c76c-486c-91c2-14e815e588ec" width="600">
 
 
