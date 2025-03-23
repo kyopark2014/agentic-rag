@@ -540,9 +540,7 @@ workflow.add_edge("generate", END)
 
 아래는 LangGraph Builder로 그린 graph 입니다. 
 
-![builder-self-rag](https://github.com/user-attachments/assets/aeb740a7-abba-451a-9c36-3f358a6653c6)
-
-<img src="https://github.com/user-attachments/assets/7030df9e-a71e-4f7d-8ecb-a3a0918d6d47" width="400">
+<img src="https://github.com/user-attachments/assets/7030df9e-a71e-4f7d-8ecb-a3a0918d6d47" width="600">
 
 
 Self RAG의 workflow는 아래와 같습니다.
