@@ -493,11 +493,7 @@ tool_node = ToolNode(tools)
 
 [Corrective RAG(CRAG)](https://github.com/kyopark2014/langgraph-agent/blob/main/corrective-rag-agent.md)는 retrieval/grading 후에 질문을 rewrite한 후 인터넷 검색에서 얻어진 결과로 RAG의 성능을 강화하는 방법입니다. 
 
-![image](https://github.com/user-attachments/assets/27228159-b307-4588-8a8a-61d8deaa90e3)
-
-![builder-crag](https://github.com/user-attachments/assets/cd694617-fe01-41d8-92e3-0dc3df3f8ca1)
-
-
+<img src="https://github.com/user-attachments/assets/67be90cf-7296-4381-a30c-d92b7c2638a5" width="400">
 
 
 CRAG의 workflow는 아래와 같습니다. 
