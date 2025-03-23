@@ -549,6 +549,9 @@ workflow.add_edge("generate", END)
 
 <img src="https://github.com/user-attachments/assets/7030df9e-a71e-4f7d-8ecb-a3a0918d6d47" width="600">
 
+<img src="https://github.com/user-attachments/assets/a493ef49-5533-4395-959f-77124c39fd88" width="500">
+
+
 
 Self RAG의 workflow는 아래와 같습니다.
 
