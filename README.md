@@ -391,6 +391,9 @@ LangSmith에서 확인한 동작은 아래와 같습니다.
 
 <img src="https://github.com/user-attachments/assets/7650819d-5abf-46d5-8a2c-820351e9404c" width="400">
 
+<img src="https://github.com/user-attachments/assets/e58b29cd-c94a-4c72-8452-a84de4b0051e" width="400">
+
+
 
 Tool use 방식 agent의 workflow는 아래와 같습니다. Fuction을 선택하는 call model 노드과 실행하는 tool 노드로 구성됩니다. 선택된 tool의 결과에 따라 cycle형태로 추가 실행을 하거나 종료하면서 결과를 전달할 수 있습니다.
 
