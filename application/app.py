@@ -9,9 +9,10 @@ import cost_analysis as cost
 
 logger = utils.CreateLogger("streamlit")
 
-# title
+# Configure Streamlit page settings
 st.set_page_config(page_title='Agentic RAG', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
 
+# Define descriptions for different conversation modes
 mode_descriptions = {
     "일상적인 대화": [
         "대화이력을 바탕으로 챗봇과 일상의 대화를 편안히 즐길수 있습니다."
@@ -51,9 +52,11 @@ mode_descriptions = {
     ]
 }
 
+# Initialize sidebar with menu and configuration options
 with st.sidebar:
     st.title("🔮 Menu")
     
+    # Display application description
     st.markdown(
         "Amazon Bedrock을 이용해 다양한 형태의 대화를 구현합니다." 
         "여기에서는 일상적인 대화와 각종 툴을 이용해 Agent를 구현할 수 있습니다." 
@@ -64,14 +67,14 @@ with st.sidebar:
 
     st.subheader("🐱 대화 형태")
     
-    # radio selection
+    # Mode selection radio buttons
     mode = st.radio(
         label="원하는 대화 형태를 선택하세요. ",options=["일상적인 대화", "RAG", "Agentic RAG", "Agentic RAG (Chat)", "Corrective RAG", "Self RAG", "Self Corrective RAG", "Agent (Reflection)", "Agent (Planning)", "번역하기", "이미지 분석", "비용 분석"], index=0
     )   
     st.info(mode_descriptions[mode][0])    
     # print('mode: ', mode)
 
-    # model selection box
+    # Model selection dropdown
     if mode == '이미지 분석':
         index = 2
     else:
@@ -91,7 +94,7 @@ with st.sidebar:
         logger.info(f"fileId: {chat.fileId}")
         uploaded_file = st.file_uploader("RAG를 위한 파일을 선택합니다.", type=["pdf", "doc", "docx", "ppt", "pptx", "png", "jpg", "jpeg", "txt", "py", "md", "csv"], key=chat.fileId)
 
-    # debug checkbox
+    # Debug and feature toggles
     select_debugMode = st.checkbox('Debug Mode', value=True)
     debugMode = 'Enable' if select_debugMode else 'Disable'
     #print('debugMode: ', debugMode)
@@ -132,8 +135,10 @@ with st.sidebar:
     clear_button = st.button("대화 초기화", key="clear")
     # print('clear_button: ', clear_button)
 
+# Main content area
 st.title('🔮 '+ mode)  
 
+# Handle chat history initialization and clearing
 if clear_button==True:
     chat.initiate()
     cost.cost_data = {}
@@ -144,7 +149,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.greetings = False
 
-# Display chat messages from history on app rerun
+# Function to display chat messages
 def display_chat_messages():
     """Print message history
     @returns None
@@ -161,6 +166,7 @@ def display_chat_messages():
 
 display_chat_messages()
 
+# Function to show reference documents in debug mode
 def show_references(reference_docs):
     if debugMode == "Enable" and reference_docs:
         with st.expander(f"답변에서 참조한 {len(reference_docs)}개의 문서입니다."):
@@ -168,7 +174,7 @@ def show_references(reference_docs):
                 st.markdown(f"**{doc.metadata['name']}**: {doc.page_content}")
                 st.markdown("---")
 
-# Greet user
+# Display initial greeting message
 if not st.session_state.greetings:
     with st.chat_message("assistant"):
         intro = "아마존 베드락을 이용하여 주셔서 감사합니다. 편안한 대화를 즐기실수 있으며, 파일을 업로드하면 요약을 할 수 있습니다."
@@ -216,8 +222,7 @@ if chart == 'Enable':
         url = "https://raw.githubusercontent.com/kyopark2014/agentic-workflow/main/contents/planning.png"
         col2.image(url)
 
-# Preview the uploaded image in the sidebar
-file_name = ""
+# Handle file upload and processing
 if uploaded_file and clear_button==False and not mode == '이미지 분석':
     if uploaded_file.name:      
         chat.initiate()
@@ -281,7 +286,7 @@ if clear_button==False and mode == '비용 분석':
             st.markdown(cost.insights)
             st.session_state.messages.append({"role": "assistant", "content": cost.insights})
             
-# Always show the chat input
+# Main chat input and response handling
 if prompt := st.chat_input("메시지를 입력하세요."):
     with st.chat_message("user"):  # display user message in chat message container
         st.markdown(prompt)
