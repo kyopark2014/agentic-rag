@@ -123,8 +123,8 @@ if LLM_embedding is None:
     raise Exception ("No Embedding!")
 
 
-enableParentDocumentRetrival = 'true'
-enableHybridSearch = 'true'
+enableParentDocumentRetrival = 'Enable'
+enableHybridSearch = 'Enable'
 selected_embedding = 0
 
 model_name = "Nova Pro"

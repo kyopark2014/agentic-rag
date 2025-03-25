@@ -146,7 +146,7 @@ def retrieve_documents_from_opensearch(query, top_k):
     )  
     
     relevant_docs = []
-    if chat.enableParentDocumentRetrival == 'enable':
+    if chat.enableParentDocumentRetrival == 'Enable':
         result = vectorstore_opensearch.similarity_search_with_score(
             query = query,
             k = top_k*2,  
@@ -226,7 +226,7 @@ def retrieve_documents_from_opensearch(query, top_k):
     # print('the number of docs (vector search): ', len(relevant_docs))
 
     # Lexical Search
-    if chat.enableHybridSearch == 'true':
+    if chat.enableHybridSearch == 'Enable':
         relevant_docs += lexical_search(query, top_k)    
 
     return relevant_docs
