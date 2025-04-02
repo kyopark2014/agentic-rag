@@ -11,7 +11,8 @@
 
 전체적인 architecture는 아래와 같습니다. Streamlit이 설치된 EC2는 private subnet에 있고, CloudFront-ALB를 이용해 외부와 연결됩니다. RAG는 OpenSearch를 활용하고 있습니다. 인터넷 검색은 tavily를 사용하고 날씨 API를 추가로 활용합니다.
 
-<img width="800" alt="image" src="https://github.com/user-attachments/assets/3353ade1-db6e-4d30-baa5-be78d9820418" />
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/12ec9f8e-25ef-45b4-a8d7-d09d2f31bacd" />
+
 
 여기에서는 Lambda-Document를 이용해 입력된 문서를 parsing하여 OpenSearch에 push합니다. 이를 위한 event driven 방식의 데이터 처리 방식은 아래와 같습니다.
 
