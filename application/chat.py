@@ -40,7 +40,6 @@ from langgraph.store.memory import InMemoryStore
 logger = utils.CreateLogger("chat")
 
 userId = uuid.uuid4().hex
-logger.info(f"userId: {userId}")
 map_chain = dict() # general conversation
 
 checkpointers = dict() 
@@ -121,7 +120,6 @@ index_name = projectName
 LLM_embedding = json.loads(config["LLM_embedding"]) if "LLM_embedding" in config else None
 if LLM_embedding is None:
     raise Exception ("No Embedding!")
-
 
 enableParentDocumentRetrival = 'Enable'
 enableHybridSearch = 'Enable'

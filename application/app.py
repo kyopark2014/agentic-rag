@@ -110,7 +110,7 @@ with st.sidebar:
     #print('multiRegion: ', multiRegion)
 
     # extended thinking of claude 3.7 sonnet
-    select_reasoning = st.checkbox('Reasonking (only Claude 3.7 Sonnet)', value=False)
+    select_reasoning = st.checkbox('Reasoning', value=False)
     reasoningMode = 'Enable' if select_reasoning and modelName=='Claude 3.7 Sonnet' else 'Disable'
     logger.info(f"reasoningMode: {reasoningMode}")
 
