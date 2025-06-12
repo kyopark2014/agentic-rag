@@ -128,12 +128,17 @@ export class CdkAgenticRagStack extends cdk.Stack {
       principals: [new iam.AnyPrincipal()],      
     });  
 
-    const domain = new opensearch.Domain(this, 'Domain', {
+/*    const domain = new opensearch.Domain(this, 'Domain', {
       version: opensearch.EngineVersion.OPENSEARCH_2_3,
       
       domainName: domainName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       enforceHttps: true,
+      // fineGrainedAccessControl: {
+      //   masterUserName: opensearch_account,
+      //   // masterUserPassword: cdk.SecretValue.secretsManager('opensearch-private-key'),
+      //   masterUserPassword:cdk.SecretValue.unsafePlainText(opensearch_passwd)
+      // },
       capacity: {
         masterNodes: 3,
         masterNodeInstanceType: 'r6g.large.search',
@@ -165,7 +170,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
       value: 'https://'+domain.domainEndpoint,
       description: 'The endpoint of OpenSearch Domain',
     });
-    opensearch_url = 'https://'+domain.domainEndpoint;
+    opensearch_url = 'https://'+domain.domainEndpoint; */
 
     const apiInvokePolicy = new iam.PolicyStatement({ 
       // resources: ['arn:aws:execute-api:*:*:*'],
