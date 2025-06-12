@@ -170,7 +170,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
       value: 'https://'+domain.domainEndpoint,
       description: 'The endpoint of OpenSearch Domain',
     });
-    opensearch_url = 'https://'+domain.domainEndpoint; */
+    opensearch_url = 'https://'+domain.domainEndpoint; */  
 
     const apiInvokePolicy = new iam.PolicyStatement({ 
       // resources: ['arn:aws:execute-api:*:*:*'],
