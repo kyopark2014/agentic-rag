@@ -134,11 +134,6 @@ export class CdkAgenticRagStack extends cdk.Stack {
       domainName: domainName,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       enforceHttps: true,
-      fineGrainedAccessControl: {
-        masterUserName: opensearch_account,
-        // masterUserPassword: cdk.SecretValue.secretsManager('opensearch-private-key'),
-        masterUserPassword:cdk.SecretValue.unsafePlainText(opensearch_passwd)
-      },
       capacity: {
         masterNodes: 3,
         masterNodeInstanceType: 'r6g.large.search',
@@ -442,7 +437,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
       ]
     });  
 
-    // S3 endpoint
+    // s3BucketAcessPoint
     // const s3BucketAcessPoint = vpc.addGatewayEndpoint(`s3Endpoint-${projectName}`, {
     //   service: ec2.GatewayVpcEndpointAwsService.S3,
     // });
@@ -455,7 +450,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
     //   }),
     // ); 
 
-    // Bedrock endpoint
+    // bedrockEndpoint
     // const bedrockEndpoint = vpc.addInterfaceEndpoint(`bedrock-endpoint-${projectName}`, {
     //   privateDnsEnabled: true,
     //   service: new ec2.InterfaceVpcEndpointService(`com.amazonaws.${region}.bedrock-runtime`, 443)
@@ -469,7 +464,7 @@ export class CdkAgenticRagStack extends cdk.Stack {
     //     resources: ['*'],
     //   }),
     // );
-    
+
     // Knowledge base endpoint
     // const knowledgeBaseEndpoint = vpc.addInterfaceEndpoint(`knowledge-base-endpoint-${projectName}`, {
     //   privateDnsEnabled: true,
